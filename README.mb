@@ -1,0 +1,61 @@
+# DataHorse
+
+## Descripción
+
+DataHorse es una plataforma web orientada al sector equino que busca centralizar y facilitar el acceso a la información relacionada con caballos disponibles para reproducción.
+
+Actualmente, la información sobre caballos, sus características, genealogía, ubicación, disponibilidad y datos relacionados se encuentra dispersa en diferentes medios como WhatsApp, Facebook, Instagram, contactos personales, documentos y registros.
+
+DataHorse busca reunir esta información en una sola plataforma, permitiendo a los usuarios publicar y consultar caballos, realizar búsquedas y filtros, comparar ejemplares, consultar información de los animales y establecer contacto entre usuarios mediante un sistema de chat.
+
+Además, el sistema contará con una funcionalidad básica de compatibilidad que permitirá priorizar caballos de acuerdo con diferentes características de la yegua registrada y del caballo candidato.
+
+---
+
+## Objetivo
+
+Desarrollar una plataforma web que permita centralizar la información de caballos destinados a reproducción y facilitar la búsqueda, comparación y contacto entre usuarios interesados en servicios de reproducción equina.
+
+El sistema busca facilitar el acceso a información organizada sobre los ejemplares y proporcionar herramientas que ayuden al usuario en el proceso de búsqueda y selección de caballos compatibles.
+
+---
+
+## Tecnologías utilizadas
+
+### Lenguajes de programación
+
+- Python
+- TypeScript
+- SQL
+- HTML
+- CSS
+
+### Frameworks y tecnologías
+
+- **FastAPI:** desarrollo de la API y backend.
+- **Angular:** desarrollo del frontend.
+- **Pydantic:** validación y estructuración de datos en el backend.
+- **Arquitectura Hexagonal:** organización de la lógica y componentes del backend.
+
+### Base de datos
+
+- **MySQL:** almacenamiento y gestión de la información del sistema.
+- **MySQL Workbench:** diseño y administración de la base de datos.
+
+### Herramientas de desarrollo y gestión
+
+- **Git:** control de versiones.
+- **GitHub:** almacenamiento y colaboración sobre el código fuente.
+- **Jira:** gestión del proyecto, backlog, historias de usuario y sprints.
+- **Visual Studio Code:** entorno de desarrollo.
+
+---
+
+## Arquitectura
+
+El backend de DataHorse utiliza una arquitectura monolítica basada en el enfoque de **Arquitectura Hexagonal**, también conocida como Ports and Adapters.
+
+La estructura permite separar las reglas del negocio de elementos externos como la API y la base de datos.
+
+De forma general, el sistema se organiza de la siguiente manera:
+
