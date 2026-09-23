@@ -14,7 +14,7 @@ esa clase en app/config/dependencies.py. Nada más se toca.
 
 import uuid
 
-from app.domain.entities.usuario import Usuario
+from app.domain.entities.Usuario import Usuario
 from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
 
 _usuarios_en_memoria: dict[str, Usuario] = {}

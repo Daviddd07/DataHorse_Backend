@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from app.application.uses_cases.login_use_case import InvalidCredentialsError
-from app.application.uses_cases.registrar_use_case import EmailAlreadyExistsError
+from app.application.use_cases.login_use_case import InvalidCredentialsError
+from app.application.use_cases.registrar_use_case import EmailAlreadyExistsError
 from app.config.dependencies import get_login_use_case, get_registrar_use_case
 from app.domain.ports.in_.login_port import LoginPort
 from app.domain.ports.in_.registrar_port import RegistrarPort
