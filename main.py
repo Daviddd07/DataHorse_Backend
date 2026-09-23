@@ -1,17 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="API Backend")
+from app.infraestructure.adaptadores.inbound.rest import auth_controller
 
-# Permitir la conexión con el frontend de Angular (puerto 4200)
+app = FastAPI(title="DataHorse API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],
+    allow_origins=["http://localhost:4200"],  # tu Angular en desarrollo
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
-@app.get("/api/v1/ping")
-def ping():
-    return {"mensaje": "Conexión exitosa con FastAPI"}
+app.include_router(auth_controller.router)
+
+
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
