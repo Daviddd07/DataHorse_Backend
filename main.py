@@ -12,7 +12,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(controller.router)
+app.include_router(controller.router, prefix="/api/v1")
 
 
 @app.get("/")
