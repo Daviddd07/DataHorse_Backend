@@ -3,9 +3,9 @@ from abc import ABC, abstractmethod
 
 class PasswordHasherPort(ABC):
     @abstractmethod
-    def verify(self, plain_password: str, hashed_password: str) -> bool:
+    def verificar(self, plain_password: str, hashed_password: str) -> bool:
         ...
 
     @abstractmethod
-    def hash(self, plain_password: str) -> str:
+    def hashear(self, plain_password: str) -> str:
         ...

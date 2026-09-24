@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.infraestructure.adaptadores.inbound.rest import auth_controller
+from app.infraestructure.adaptadores.inbound.rest import controller
 
 app = FastAPI(title="DataHorse API")
 app.add_middleware(
@@ -12,7 +12,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_controller.router)
+app.include_router(controller.router)
 
 
 @app.get("/")

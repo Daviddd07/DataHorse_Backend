@@ -3,7 +3,7 @@ from app.domain.ports.out.password_hasher_port import PasswordHasherPort
 from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
 
 
-class InvalidCredentialsError(Exception):
+class EmailAlreadyExistsError(Exception):
     pass
 
 
@@ -18,6 +18,8 @@ class LoginUseCase(LoginPort):
         # Mismo error exista o no el correo, para no filtrar qué correos
         # están registrados (evita "user enumeration").
         if usuario is None or not self.hasher.verify(password, usuario.password_hash):
-            raise InvalidCredentialsError("Correo o contraseña incorrectos")
+            raise EmailAlreadyExistsError("Correo o contraseña incorrectos")
 
         return usuario.id
+class InvalidCredentialsError(Exception):
+    """Correo o contraseña incorrectos."""
