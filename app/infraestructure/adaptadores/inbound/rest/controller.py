@@ -1,5 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
-
+from fastapi import Request
+from app.config.dependencies import get_usuario_repo
+from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
+from app.infraestructure.adaptadores.outbound.security.jwt_handler import (
+    create_access_token,
+    decode_access_token,
+)
 from app.application.use_cases.login_use_case import InvalidCredentialsError
 from app.config.dependencies import get_login_use_case, get_registrar_use_case
 from app.domain.exceptions import DatosInvalidosError, EmailAlreadyExistsError
@@ -14,7 +20,7 @@ from app.domain.ports.in_.registrar_usuario_port import (
     RegistrarUsuarioComando,
     RegistrarUsuarioPort,
 )
-from app.infraestructure.adaptadores.outbound.security.jwt_handler import create_access_token
+
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -61,5 +67,24 @@ def registrar(
         raise HTTPException(status_code=422, detail=e.mensaje)
     except EmailAlreadyExistsError:
         raise HTTPException(status_code=409, detail="Ese correo ya está registrado")
+
+    return UsuarioResponse(id=usuario.id_usuario, correo=usuario.correo, nombre=usuario.nombre)
+
+@router.get("/me", response_model=UsuarioResponse)
+def me(
+    request: Request,
+    repo: UsuarioRepositoryPort = Depends(get_usuario_repo),
+):
+    token = request.cookies.get("access_token")
+    if token is None:
+        raise HTTPException(status_code=401, detail="No autenticado")
+
+    id_texto = decode_access_token(token)
+    if id_texto is None:
+        raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
+
+    usuario = repo.find_by_id(int(id_texto))
+    if usuario is None:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
 
     return UsuarioResponse(id=usuario.id_usuario, correo=usuario.correo, nombre=usuario.nombre)

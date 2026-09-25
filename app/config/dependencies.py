@@ -4,6 +4,7 @@ from app.domain.ports.in_.login_port import LoginPort
 from app.domain.ports.in_.registrar_usuario_port import RegistrarUsuarioPort
 from app.infraestructure.adaptadores.outbound.argon2_password_hasher import Argon2PasswordHasher
 from app.infraestructure.adaptadores.outbound.usuario_repository_mysql import UsuarioRepositoryMySQL
+from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
 
 # TEMPORAL: un solo repositorio en memoria y un solo hasher, compartidos por
 # toda la app. Cuando exista la base de datos, aquí cambias el repositorio.
@@ -17,3 +18,6 @@ def get_login_use_case() -> LoginPort:
 
 def get_registrar_use_case() -> RegistrarUsuarioPort:
     return RegistrarUseCase(_usuario_repo, _hasher)
+
+def get_usuario_repo() -> UsuarioRepositoryPort:
+    return _usuario_repo

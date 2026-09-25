@@ -7,6 +7,7 @@ from app.infraestructure.adaptadores.outbound.persistence.db_conexion import Ses
 from app.infraestructure.adaptadores.outbound.persistence.db_consultas import (
     insertar_usuario,
     obtener_usuario_por_correo,
+    obtener_usuario_por_id,
 )
 
 
@@ -53,6 +54,14 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
         db = SessionLocal()
         try:
             fila = obtener_usuario_por_correo(db, correo)
+            return _a_entidad(fila) if fila else None
+        finally:
+            db.close()
+
+    def find_by_id(self, id_usuario: int) -> Optional[Usuario]:
+        db = SessionLocal()
+        try:
+            fila = obtener_usuario_por_id(db, id_usuario)
             return _a_entidad(fila) if fila else None
         finally:
             db.close()
