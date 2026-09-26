@@ -1,40 +1,63 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
-from fastapi import Request
-from app.config.dependencies import (
-    get_usuario_repo,
-    get_listar_razas_use_case,
-    get_registrar_caballo_use_case,
-)
-from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
-from app.infraestructure.adaptadores.outbound.security.jwt_handler import (
-    create_access_token,
-    decode_access_token,
-)
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from sqlalchemy import text
+
 from app.application.use_cases.login_use_case import InvalidCredentialsError
-from app.config.dependencies import get_login_use_case, get_registrar_use_case
-from app.domain.exceptions import DatosInvalidosError, EmailAlreadyExistsError
-from app.domain.ports.in_.login_port import LoginPort
-from app.domain.ports.in_.registrar_usuario_port import RegistrarUsuarioPort
-from app.domain.ports.in_.listar_razas_port import ListarRazasPort
-from app.domain.ports.in_.registrar_caballo_port import RegistrarCaballoComando, RegistrarCaballoPort
-from app.infraestructure.adaptadores.inbound.rest.schemas import (
-    LoginRequest,
-    RegistrarRequest,
-    UsuarioResponse,
-    RazaResponse,
-    CaballoRequest,
-    CaballoResponse,
+from app.application.use_cases.registrar_use_case import EmailAlreadyExistsError
+
+from app.config.dependencies import (
+    get_login_use_case,
+    get_registrar_use_case,
+    get_usuario_repo,
 )
+
+from app.domain.exceptions import DatosInvalidosError
+
+from app.domain.ports.in_.login_port import LoginPort
 from app.domain.ports.in_.registrar_usuario_port import (
     RegistrarUsuarioComando,
     RegistrarUsuarioPort,
 )
 
+from app.domain.ports.out.usuario_repository_port import (
+    UsuarioRepositoryPort,
+)
 
-router = APIRouter(prefix="/auth", tags=["auth"])
-razas_router = APIRouter(prefix="/razas", tags=["razas"])
-caballos_router = APIRouter(prefix="/caballos", tags=["caballos"])
+from app.infraestructure.adaptadores.inbound.rest.schemas import (
+    LoginRequest,
+    RegistrarRequest,
+    UsuarioResponse,
+)
 
+from app.infraestructure.adaptadores.outbound.persistence.db_conexion import (
+    engine,
+)
+
+from app.infraestructure.adaptadores.outbound.security.jwt_handler import (
+    create_access_token,
+    decode_access_token,
+)
+
+
+# ======================================================
+# ROUTERS
+# ======================================================
+
+# Rutas de autenticación
+router = APIRouter(
+    prefix="/auth",
+    tags=["auth"]
+)
+
+# Rutas de razas
+razas_router = APIRouter(
+    prefix="/razas",
+    tags=["razas"]
+)
+
+
+# ======================================================
+# LOGIN
+# ======================================================
 
 @router.post("/login")
 def login(
@@ -43,9 +66,16 @@ def login(
     use_case: LoginPort = Depends(get_login_use_case),
 ):
     try:
-        usuario_id = use_case.execute(body.correo, body.password)
+        usuario_id = use_case.execute(
+            body.correo,
+            body.password
+        )
+
     except InvalidCredentialsError:
-        raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos")
+        raise HTTPException(
+            status_code=401,
+            detail="Correo o contraseña incorrectos"
+        )
 
     token = create_access_token(usuario_id)
 
@@ -53,107 +83,143 @@ def login(
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,  # cambia a True cuando sirvas por HTTPS
+        secure=False,  # Cambiar a True cuando uses HTTPS
         samesite="lax",
         max_age=1800,
     )
-    return {"mensaje": "Login exitoso"}
+
+    return {
+        "mensaje": "Login exitoso"
+    }
 
 
-@router.post("/registro", response_model=UsuarioResponse, status_code=201)
-def registrar(
+# ======================================================
+# REGISTRO
+# ======================================================
+
+@router.post(
+    "/register",
+    response_model=UsuarioResponse,
+    status_code=201
+)
+def register(
     body: RegistrarRequest,
-    use_case: RegistrarUsuarioPort = Depends(get_registrar_use_case),
+    use_case: RegistrarUsuarioPort = Depends(
+        get_registrar_use_case
+    ),
 ):
     comando = RegistrarUsuarioComando(
         nombre=body.nombre,
         correo=body.correo,
         contrasena=body.password,
-        telefono=body.telefono,
-        ubicacion=body.ubicacion,
+        telefono=getattr(body, "telefono", None),
+        ubicacion=getattr(body, "ubicacion", None),
     )
+
     try:
         usuario = use_case.ejecutar(comando)
+
     except DatosInvalidosError as e:
-        raise HTTPException(status_code=422, detail=e.mensaje)
+        raise HTTPException(
+            status_code=422,
+            detail=e.mensaje
+        )
+
     except EmailAlreadyExistsError:
-        raise HTTPException(status_code=409, detail="Ese correo ya está registrado")
+        raise HTTPException(
+            status_code=409,
+            detail="Ese correo ya está registrado"
+        )
 
-    return UsuarioResponse(id=usuario.id_usuario, correo=usuario.correo, nombre=usuario.nombre)
+    return UsuarioResponse(
+        id=usuario.id_usuario,
+        correo=usuario.correo,
+        nombre=usuario.nombre
+    )
 
 
-@router.get("/me", response_model=UsuarioResponse)
+# ======================================================
+# USUARIO ACTUAL
+# ======================================================
+
+@router.get(
+    "/me",
+    response_model=UsuarioResponse
+)
 def me(
     request: Request,
-    repo: UsuarioRepositoryPort = Depends(get_usuario_repo),
+    repo: UsuarioRepositoryPort = Depends(
+        get_usuario_repo
+    ),
 ):
     token = request.cookies.get("access_token")
+
     if token is None:
-        raise HTTPException(status_code=401, detail="No autenticado")
+        raise HTTPException(
+            status_code=401,
+            detail="No autenticado"
+        )
 
     id_texto = decode_access_token(token)
-    if id_texto is None:
-        raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
 
-    usuario = repo.find_by_id(int(id_texto))
+    if id_texto is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Sesión inválida o expirada"
+        )
+
+    usuario = repo.find_by_id(
+        int(id_texto)
+    )
+
     if usuario is None:
-        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+        raise HTTPException(
+            status_code=401,
+            detail="Usuario no encontrado"
+        )
 
-    return UsuarioResponse(id=usuario.id_usuario, correo=usuario.correo, nombre=usuario.nombre)
-
-
-def _usuario_autenticado(request: Request) -> int:
-    token = request.cookies.get("access_token")
-    if token is None:
-        raise HTTPException(status_code=401, detail="No autenticado")
-    id_texto = decode_access_token(token)
-    if id_texto is None:
-        raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
-    return int(id_texto)
-
-
-@razas_router.get("", response_model=list[RazaResponse])
-def listar_razas(use_case: ListarRazasPort = Depends(get_listar_razas_use_case)):
-    razas = use_case.ejecutar()
-    return [RazaResponse(id_raza=r.id_raza, nombre=r.nombre, descripcion=r.descripcion) for r in razas]
-
-
-@caballos_router.post("", response_model=CaballoResponse, status_code=201)
-def registrar_caballo(
-    body: CaballoRequest,
-    request: Request,
-    use_case: RegistrarCaballoPort = Depends(get_registrar_caballo_use_case),
-):
-    id_propietario = _usuario_autenticado(request)
-
-    comando = RegistrarCaballoComando(
-        id_propietario=id_propietario,
-        nombre=body.nombre,
-        sexo=body.sexo,
-        fecha_nacimiento=body.fecha_nacimiento,
-        altura=body.altura,
-        color=body.color,
-        ubicacion=body.ubicacion,
-        descripcion=body.descripcion,
-        disponibilidad=body.disponibilidad,
-        id_raza=body.id_raza,
-        raza_personalizada=body.raza_personalizada,
+    return UsuarioResponse(
+        id=usuario.id_usuario,
+        correo=usuario.correo,
+        nombre=usuario.nombre
     )
+
+
+# ======================================================
+# LISTAR RAZAS
+# ======================================================
+
+@razas_router.get("")
+def listar_razas():
     try:
-        caballo = use_case.ejecutar(comando)
-    except DatosInvalidosError as e:
-        raise HTTPException(status_code=422, detail=f"{e.campo}: {e.mensaje}")
+        with engine.connect() as connection:
 
-    return CaballoResponse(
-        id_caballo=caballo.id_caballo,
-        id_raza=caballo.id_raza,
-        id_propietario=caballo.id_propietario,
-        nombre=caballo.nombre,
-        sexo=caballo.sexo,
-        fecha_nacimiento=caballo.fecha_nacimiento,
-        altura=caballo.altura,
-        color=caballo.color,
-        ubicacion=caballo.ubicacion,
-        descripcion=caballo.descripcion,
-        disponibilidad=caballo.disponibilidad,
-    )
+            resultado = connection.execute(
+                text("""
+                    SELECT
+                        id_raza,
+                        nombre,
+                        descripcion
+                    FROM raza
+                    ORDER BY nombre
+                """)
+            )
+
+            razas = []
+
+            for fila in resultado:
+                razas.append(
+                    {
+                        "id_raza": fila.id_raza,
+                        "nombre": fila.nombre,
+                        "descripcion": fila.descripcion
+                    }
+                )
+
+            return razas
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
