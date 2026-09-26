@@ -1,6 +1,6 @@
 ﻿from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer, String
+from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -29,3 +29,30 @@ class UsuarioModel(Base):
     estado: Mapped[str] = mapped_column(String(30), nullable=False)
 
     rol = relationship("RolModel")
+
+
+class RazaModel(Base):
+    __tablename__ = "Raza"
+
+    id_raza: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    nombre: Mapped[str] = mapped_column(String(120), nullable=False)
+    descripcion: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+class CaballoModel(Base):
+    __tablename__ = "Caballo"
+
+    id_caballo: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id_raza: Mapped[int] = mapped_column(ForeignKey("Raza.id_raza"), nullable=False)
+    id_propietario: Mapped[int] = mapped_column(ForeignKey("Usuario.id_usuario"), nullable=False)
+    nombre: Mapped[str] = mapped_column(String(120), nullable=False)
+    sexo: Mapped[str] = mapped_column(String(20), nullable=False)
+    fecha_nacimiento: Mapped[date] = mapped_column(Date, nullable=False)
+    altura: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    color: Mapped[str] = mapped_column(String(60), nullable=False)
+    ubicacion: Mapped[str] = mapped_column(String(180), nullable=False)
+    descripcion: Mapped[str] = mapped_column(Text, nullable=False)
+    disponibilidad: Mapped[str] = mapped_column(String(30), nullable=False)
+
+    raza = relationship("RazaModel")
+    propietario = relationship("UsuarioModel")

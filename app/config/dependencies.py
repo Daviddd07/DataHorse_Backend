@@ -1,15 +1,29 @@
+from app.application.use_cases.listar_razas_use_case import ListarRazasUseCase
 from app.application.use_cases.login_use_case import LoginUseCase
+from app.application.use_cases.registrar_caballo_use_case import RegistrarCaballoUseCase
 from app.application.use_cases.registrar_use_case import RegistrarUseCase
+from app.domain.ports.in_.listar_razas_port import ListarRazasPort
 from app.domain.ports.in_.login_port import LoginPort
+from app.domain.ports.in_.registrar_caballo_port import RegistrarCaballoPort
 from app.domain.ports.in_.registrar_usuario_port import RegistrarUsuarioPort
-from app.infraestructure.adaptadores.outbound.argon2_password_hasher import Argon2PasswordHasher
-from app.infraestructure.adaptadores.outbound.usuario_repository_mysql import UsuarioRepositoryMySQL
+from app.domain.ports.out.caballo_repository_port import CaballoRepositoryPort
+from app.domain.ports.out.raza_repository_port import RazaRepositoryPort
 from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
+from app.infraestructure.adaptadores.outbound.argon2_password_hasher import Argon2PasswordHasher
+from app.infraestructure.adaptadores.outbound.persistence.caballo_repository_mysql import (
+    CaballoRepositoryMySQL,
+)
+from app.infraestructure.adaptadores.outbound.persistence.raza_repository_mysql import (
+    RazaRepositoryMySQL,
+)
+from app.infraestructure.adaptadores.outbound.usuario_repository_mysql import UsuarioRepositoryMySQL
 
 # TEMPORAL: un solo repositorio en memoria y un solo hasher, compartidos por
 # toda la app. Cuando exista la base de datos, aquí cambias el repositorio.
 _usuario_repo = UsuarioRepositoryMySQL()
 _hasher = Argon2PasswordHasher()
+_raza_repo = RazaRepositoryMySQL()
+_caballo_repo = CaballoRepositoryMySQL()
 
 
 def get_login_use_case() -> LoginPort:
@@ -19,5 +33,22 @@ def get_login_use_case() -> LoginPort:
 def get_registrar_use_case() -> RegistrarUsuarioPort:
     return RegistrarUseCase(_usuario_repo, _hasher)
 
+
 def get_usuario_repo() -> UsuarioRepositoryPort:
     return _usuario_repo
+
+
+def get_raza_repo() -> RazaRepositoryPort:
+    return _raza_repo
+
+
+def get_caballo_repo() -> CaballoRepositoryPort:
+    return _caballo_repo
+
+
+def get_listar_razas_use_case() -> ListarRazasPort:
+    return ListarRazasUseCase(_raza_repo)
+
+
+def get_registrar_caballo_use_case() -> RegistrarCaballoPort:
+    return RegistrarCaballoUseCase(_caballo_repo, _raza_repo)

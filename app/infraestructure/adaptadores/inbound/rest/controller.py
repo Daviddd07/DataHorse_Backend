@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi import Request
-from app.config.dependencies import get_usuario_repo
+from app.config.dependencies import (
+    get_usuario_repo,
+    get_listar_razas_use_case,
+    get_registrar_caballo_use_case,
+)
 from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
 from app.infraestructure.adaptadores.outbound.security.jwt_handler import (
     create_access_token,
@@ -11,10 +15,15 @@ from app.config.dependencies import get_login_use_case, get_registrar_use_case
 from app.domain.exceptions import DatosInvalidosError, EmailAlreadyExistsError
 from app.domain.ports.in_.login_port import LoginPort
 from app.domain.ports.in_.registrar_usuario_port import RegistrarUsuarioPort
+from app.domain.ports.in_.listar_razas_port import ListarRazasPort
+from app.domain.ports.in_.registrar_caballo_port import RegistrarCaballoComando, RegistrarCaballoPort
 from app.infraestructure.adaptadores.inbound.rest.schemas import (
     LoginRequest,
     RegistrarRequest,
     UsuarioResponse,
+    RazaResponse,
+    CaballoRequest,
+    CaballoResponse,
 )
 from app.domain.ports.in_.registrar_usuario_port import (
     RegistrarUsuarioComando,
@@ -23,6 +32,8 @@ from app.domain.ports.in_.registrar_usuario_port import (
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+razas_router = APIRouter(prefix="/razas", tags=["razas"])
+caballos_router = APIRouter(prefix="/caballos", tags=["caballos"])
 
 
 @router.post("/login")
@@ -70,6 +81,7 @@ def registrar(
 
     return UsuarioResponse(id=usuario.id_usuario, correo=usuario.correo, nombre=usuario.nombre)
 
+
 @router.get("/me", response_model=UsuarioResponse)
 def me(
     request: Request,
@@ -88,3 +100,60 @@ def me(
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
 
     return UsuarioResponse(id=usuario.id_usuario, correo=usuario.correo, nombre=usuario.nombre)
+
+
+def _usuario_autenticado(request: Request) -> int:
+    token = request.cookies.get("access_token")
+    if token is None:
+        raise HTTPException(status_code=401, detail="No autenticado")
+    id_texto = decode_access_token(token)
+    if id_texto is None:
+        raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
+    return int(id_texto)
+
+
+@razas_router.get("", response_model=list[RazaResponse])
+def listar_razas(use_case: ListarRazasPort = Depends(get_listar_razas_use_case)):
+    razas = use_case.ejecutar()
+    return [RazaResponse(id_raza=r.id_raza, nombre=r.nombre, descripcion=r.descripcion) for r in razas]
+
+
+@caballos_router.post("", response_model=CaballoResponse, status_code=201)
+def registrar_caballo(
+    body: CaballoRequest,
+    request: Request,
+    use_case: RegistrarCaballoPort = Depends(get_registrar_caballo_use_case),
+):
+    id_propietario = _usuario_autenticado(request)
+
+    comando = RegistrarCaballoComando(
+        id_propietario=id_propietario,
+        nombre=body.nombre,
+        sexo=body.sexo,
+        fecha_nacimiento=body.fecha_nacimiento,
+        altura=body.altura,
+        color=body.color,
+        ubicacion=body.ubicacion,
+        descripcion=body.descripcion,
+        disponibilidad=body.disponibilidad,
+        id_raza=body.id_raza,
+        raza_personalizada=body.raza_personalizada,
+    )
+    try:
+        caballo = use_case.ejecutar(comando)
+    except DatosInvalidosError as e:
+        raise HTTPException(status_code=422, detail=f"{e.campo}: {e.mensaje}")
+
+    return CaballoResponse(
+        id_caballo=caballo.id_caballo,
+        id_raza=caballo.id_raza,
+        id_propietario=caballo.id_propietario,
+        nombre=caballo.nombre,
+        sexo=caballo.sexo,
+        fecha_nacimiento=caballo.fecha_nacimiento,
+        altura=caballo.altura,
+        color=caballo.color,
+        ubicacion=caballo.ubicacion,
+        descripcion=caballo.descripcion,
+        disponibilidad=caballo.disponibilidad,
+    )

@@ -18,10 +18,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rutas de autenticación, razas y caballos
 app.include_router(controller.router, prefix="/api/v1")
-
-# Rutas de autenticación
-app.include_router(controller.router)
+app.include_router(controller.razas_router, prefix="/api/v1")
+app.include_router(controller.caballos_router, prefix="/api/v1")
 
 
 @app.get("/")
