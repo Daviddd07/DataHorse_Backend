@@ -12,7 +12,7 @@ from app.infraestructure.adaptadores.outbound.persistence.db_conexion import (
 )
 
 from app.infraestructure.adaptadores.outbound.persistence.db_tablas import (
-    UsuarioTabla,
+    UsuarioModel,
 )
 
 
@@ -20,8 +20,8 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
 
     def find_by_email(self, correo: str) -> Optional[Usuario]:
         with SessionLocal() as db:
-            stmt = select(UsuarioTabla).where(
-                UsuarioTabla.correo == correo
+            stmt = select(UsuarioModel).where(
+                UsuarioModel.correo == correo
             )
 
             usuario_db = db.scalar(stmt)
@@ -33,8 +33,8 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
 
     def find_by_id(self, id_usuario: int) -> Optional[Usuario]:
         with SessionLocal() as db:
-            stmt = select(UsuarioTabla).where(
-                UsuarioTabla.id_usuario == id_usuario
+            stmt = select(UsuarioModel).where(
+                UsuarioModel.id_usuario == id_usuario
             )
 
             usuario_db = db.scalar(stmt)
@@ -48,16 +48,16 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
         with SessionLocal() as db:
 
             existente = db.scalar(
-                select(UsuarioTabla).where(
-                    UsuarioTabla.correo == usuario.correo
+                select(UsuarioModel).where(
+                    UsuarioModel.correo == usuario.correo
                 )
             )
 
             if existente is not None:
                 raise EmailAlreadyExistsError()
 
-            usuario_db = UsuarioTabla(
-                id_rol=usuario.id_rol,
+            usuario_db = UsuarioModel(
+                rol_id_rol=usuario.id_rol,
                 nombre=usuario.nombre,
                 correo=usuario.correo,
                 contrasena=usuario.contrasena,
@@ -81,10 +81,10 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
             return self._to_domain(usuario_db)
 
     @staticmethod
-    def _to_domain(usuario_db: UsuarioTabla) -> Usuario:
+    def _to_domain(usuario_db: UsuarioModel) -> Usuario:
         return Usuario(
             id_usuario=usuario_db.id_usuario,
-            id_rol=usuario_db.id_rol,
+            id_rol=usuario_db.rol_id_rol,
             nombre=usuario_db.nombre,
             correo=usuario_db.correo,
             contrasena=usuario_db.contrasena,

@@ -1,71 +1,57 @@
-from datetime import date
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.infraestructure.adaptadores.outbound.persistence.db_tablas import (
-    UsuarioTabla,
+    CaballoModel,
+    RazaModel,
+    UsuarioModel,
 )
 
 
-def buscar_usuario_por_correo(
-    db: Session,
-    correo: str
-) -> UsuarioTabla | None:
-
-    stmt = select(UsuarioTabla).where(
-        UsuarioTabla.correo == correo
-    )
-
-    return db.scalar(stmt)
-
-
-def obtener_usuario_por_correo(
-    db: Session,
-    correo: str
-) -> UsuarioTabla | None:
-
-    return buscar_usuario_por_correo(
-        db,
-        correo
-    )
-
-
-def obtener_usuario_por_id(
-    db: Session,
-    id_usuario: int
-) -> UsuarioTabla | None:
-
-    stmt = select(UsuarioTabla).where(
-        UsuarioTabla.id_usuario == id_usuario
-    )
-
-    return db.scalar(stmt)
-
-
-def crear_usuario(
-    db: Session,
-    nombre: str,
-    correo: str,
-    contrasena: str,
-    rol_id: int,
-    telefono: str | None = None,
-    ubicacion: str | None = None
-) -> UsuarioTabla:
-
-    usuario = UsuarioTabla(
-        nombre=nombre,
-        correo=correo,
-        contrasena=contrasena,
-        telefono=telefono,
-        ubicacion=ubicacion,
-        fecha_registro=date.today(),
-        estado="activo",
-        id_rol=rol_id
-    )
-
-    db.add(usuario)
+def insertar_usuario(db: Session, datos: dict) -> UsuarioModel:
+    fila = UsuarioModel(**datos)
+    db.add(fila)
     db.commit()
-    db.refresh(usuario)
+    db.refresh(fila)
+    return fila
 
-    return usuario
+
+def obtener_usuario_por_correo(db: Session, correo: str) -> UsuarioModel | None:
+    stmt = select(UsuarioModel).where(UsuarioModel.correo == correo)
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def obtener_usuario_por_id(db: Session, id_usuario: int) -> UsuarioModel | None:
+    stmt = select(UsuarioModel).where(UsuarioModel.id_usuario == id_usuario)
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def insertar_raza(db: Session, datos: dict) -> RazaModel:
+    fila = RazaModel(**datos)
+    db.add(fila)
+    db.commit()
+    db.refresh(fila)
+    return fila
+
+
+def obtener_razas(db: Session) -> list[RazaModel]:
+    stmt = select(RazaModel).order_by(RazaModel.nombre)
+    return list(db.execute(stmt).scalars().all())
+
+
+def obtener_raza_por_id(db: Session, id_raza: int) -> RazaModel | None:
+    stmt = select(RazaModel).where(RazaModel.id_raza == id_raza)
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def insertar_caballo(db: Session, datos: dict) -> CaballoModel:
+    fila = CaballoModel(**datos)
+    db.add(fila)
+    db.commit()
+    db.refresh(fila)
+    return fila
+
+
+def obtener_caballos(db: Session) -> list[CaballoModel]:
+    stmt = select(CaballoModel)
+    return list(db.execute(stmt).scalars().all())

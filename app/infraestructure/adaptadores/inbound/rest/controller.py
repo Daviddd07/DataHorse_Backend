@@ -6,6 +6,7 @@ from app.application.use_cases.registrar_use_case import EmailAlreadyExistsError
 
 from app.config.dependencies import (
     get_login_use_case,
+    get_registrar_caballo_use_case,
     get_registrar_use_case,
     get_usuario_repo,
 )
@@ -13,6 +14,10 @@ from app.config.dependencies import (
 from app.domain.exceptions import DatosInvalidosError
 
 from app.domain.ports.in_.login_port import LoginPort
+from app.domain.ports.in_.registrar_caballo_port import (
+    RegistrarCaballoComando,
+    RegistrarCaballoPort,
+)
 from app.domain.ports.in_.registrar_usuario_port import (
     RegistrarUsuarioComando,
     RegistrarUsuarioPort,
@@ -23,6 +28,8 @@ from app.domain.ports.out.usuario_repository_port import (
 )
 
 from app.infraestructure.adaptadores.inbound.rest.schemas import (
+    CaballoRequest,
+    CaballoResponse,
     LoginRequest,
     RegistrarRequest,
     UsuarioResponse,
@@ -53,6 +60,33 @@ razas_router = APIRouter(
     prefix="/razas",
     tags=["razas"]
 )
+
+# Rutas de caballos
+caballos_router = APIRouter(
+    prefix="/caballos",
+    tags=["caballos"]
+)
+
+
+def _obtener_id_usuario_autenticado(request: Request) -> int:
+    """Lee y valida la cookie de sesión, devolviendo el id del usuario logueado."""
+    token = request.cookies.get("access_token")
+
+    if token is None:
+        raise HTTPException(
+            status_code=401,
+            detail="No autenticado"
+        )
+
+    id_texto = decode_access_token(token)
+
+    if id_texto is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Sesión inválida o expirada"
+        )
+
+    return int(id_texto)
 
 
 # ======================================================
@@ -152,25 +186,9 @@ def me(
         get_usuario_repo
     ),
 ):
-    token = request.cookies.get("access_token")
+    id_usuario = _obtener_id_usuario_autenticado(request)
 
-    if token is None:
-        raise HTTPException(
-            status_code=401,
-            detail="No autenticado"
-        )
-
-    id_texto = decode_access_token(token)
-
-    if id_texto is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Sesión inválida o expirada"
-        )
-
-    usuario = repo.find_by_id(
-        int(id_texto)
-    )
+    usuario = repo.find_by_id(id_usuario)
 
     if usuario is None:
         raise HTTPException(
@@ -223,3 +241,53 @@ def listar_razas():
             status_code=500,
             detail=str(e)
         )
+
+
+# ======================================================
+# REGISTRAR CABALLO
+# ======================================================
+
+@caballos_router.post(
+    "",
+    response_model=CaballoResponse,
+    status_code=201
+)
+def registrar_caballo(
+    body: CaballoRequest,
+    request: Request,
+    use_case: RegistrarCaballoPort = Depends(get_registrar_caballo_use_case),
+):
+    id_propietario = _obtener_id_usuario_autenticado(request)
+
+    comando = RegistrarCaballoComando(
+        id_propietario=id_propietario,
+        nombre=body.nombre,
+        sexo=body.sexo,
+        fecha_nacimiento=body.fecha_nacimiento,
+        altura=body.altura,
+        color=body.color,
+        ubicacion=body.ubicacion,
+        descripcion=body.descripcion,
+        disponibilidad=body.disponibilidad,
+        id_raza=body.id_raza,
+        raza_personalizada=body.raza_personalizada,
+    )
+
+    try:
+        caballo = use_case.ejecutar(comando)
+    except DatosInvalidosError as e:
+        raise HTTPException(status_code=422, detail=e.mensaje)
+
+    return CaballoResponse(
+        id_caballo=caballo.id_caballo,
+        id_raza=caballo.id_raza,
+        id_propietario=caballo.id_propietario,
+        nombre=caballo.nombre,
+        sexo=caballo.sexo,
+        fecha_nacimiento=caballo.fecha_nacimiento,
+        altura=caballo.altura,
+        color=caballo.color,
+        ubicacion=caballo.ubicacion,
+        descripcion=caballo.descripcion,
+        disponibilidad=caballo.disponibilidad,
+    )
