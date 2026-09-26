@@ -19,7 +19,7 @@ app.add_middleware(
 )
 
 # Rutas de autenticación, razas y caballos
-app.include_router(controller.router, prefix="/api/v1")
+app.include_router(controller.router)
 app.include_router(controller.razas_router, prefix="/api/v1")
 app.include_router(controller.caballos_router, prefix="/api/v1")
 
