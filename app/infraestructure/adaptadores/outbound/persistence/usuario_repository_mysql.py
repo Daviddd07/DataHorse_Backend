@@ -1,7 +1,6 @@
-from dataclasses import asdict, fields
 from typing import Optional
 
-from sqlalchemy import select, inspect
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.domain.entities.Usuario import Usuario
@@ -20,7 +19,6 @@ from app.infraestructure.adaptadores.outbound.persistence.db_tablas import (
 class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
 
     def find_by_email(self, correo: str) -> Optional[Usuario]:
-
         with SessionLocal() as db:
 
             stmt = select(UsuarioTabla).where(
@@ -34,12 +32,10 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
 
             return self._to_domain(usuario_db)
 
-
     def create(self, usuario: Usuario) -> Usuario:
-
         with SessionLocal() as db:
 
-            # Verificar si el correo ya está registrado
+            # Verificar si el correo ya existe
             existente = db.scalar(
                 select(UsuarioTabla).where(
                     UsuarioTabla.correo == usuario.correo
@@ -49,30 +45,22 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
             if existente is not None:
                 raise CorreoYaRegistradoError()
 
-            # Convertir el dataclass Usuario en diccionario
-            datos = asdict(usuario)
-
-            # Obtener los atributos válidos del modelo SQLAlchemy
-            columnas = {
-                atributo.key
-                for atributo in inspect(UsuarioTabla).column_attrs
-            }
-
-            # Solo mandar a MySQL campos que existan en la tabla
-            datos_bd = {
-                clave: valor
-                for clave, valor in datos.items()
-                if clave in columnas
-                and not (clave == "id_usuario" and valor is None)
-            }
-
-            usuario_db = UsuarioTabla(**datos_bd)
+            # Convertir la entidad Usuario al modelo de MySQL
+            usuario_db = UsuarioTabla(
+                id_rol=usuario.id_rol,
+                nombre=usuario.nombre,
+                correo=usuario.correo,
+                contrasena=usuario.contrasena,
+                telefono=usuario.telefono,
+                ubicacion=usuario.ubicacion,
+                fecha_registro=usuario.fecha_registro,
+                estado=usuario.estado
+            )
 
             db.add(usuario_db)
 
             try:
                 db.commit()
-
             except IntegrityError:
                 db.rollback()
                 raise CorreoYaRegistradoError()
@@ -81,18 +69,16 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
 
             return self._to_domain(usuario_db)
 
-
     @staticmethod
     def _to_domain(usuario_db: UsuarioTabla) -> Usuario:
-
-        datos = {}
-
-        for campo in fields(Usuario):
-
-            if hasattr(usuario_db, campo.name):
-                datos[campo.name] = getattr(
-                    usuario_db,
-                    campo.name
-                )
-
-        return Usuario(**datos)
+        return Usuario(
+            id_usuario=usuario_db.id_usuario,
+            id_rol=usuario_db.id_rol,
+            nombre=usuario_db.nombre,
+            correo=usuario_db.correo,
+            contrasena=usuario_db.contrasena,
+            telefono=usuario_db.telefono,
+            ubicacion=usuario_db.ubicacion,
+            fecha_registro=usuario_db.fecha_registro,
+            estado=usuario_db.estado
+        )
