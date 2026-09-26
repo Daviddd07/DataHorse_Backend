@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.infraestructure.adaptadores.outbound.persistence.db_tablas import (
     CaballoModel,
+    PublicacionModel,
     RazaModel,
     UsuarioModel,
 )
@@ -55,3 +56,52 @@ def insertar_caballo(db: Session, datos: dict) -> CaballoModel:
 def obtener_caballos(db: Session) -> list[CaballoModel]:
     stmt = select(CaballoModel)
     return list(db.execute(stmt).scalars().all())
+
+
+def insertar_publicacion(db: Session, datos: dict) -> PublicacionModel:
+    fila = PublicacionModel(**datos)
+    db.add(fila)
+    db.commit()
+    db.refresh(fila)
+    return fila
+
+
+def obtener_publicaciones_activas(db: Session) -> list[dict]:
+    stmt = (
+        select(
+            PublicacionModel.id_publicacion,
+            PublicacionModel.titulo,
+            PublicacionModel.precio_referencia,
+            PublicacionModel.estado,
+            PublicacionModel.fecha_publicacion,
+            CaballoModel.id_caballo,
+            CaballoModel.nombre,
+            CaballoModel.sexo,
+            CaballoModel.color,
+            CaballoModel.ubicacion,
+            RazaModel.nombre.label("raza_nombre"),
+        )
+        .join(CaballoModel, PublicacionModel.caballo_id_caballo == CaballoModel.id_caballo)
+        .join(RazaModel, CaballoModel.id_raza == RazaModel.id_raza)
+        .where(PublicacionModel.estado == "Activa")
+        .where(CaballoModel.sexo == "Macho")
+    )
+
+    filas = db.execute(stmt).all()
+
+    return [
+        {
+            "id_publicacion": f.id_publicacion,
+            "id_caballo": f.id_caballo,
+            "titulo": f.titulo,
+            "nombre": f.nombre,
+            "raza": f.raza_nombre,
+            "sexo": f.sexo,
+            "color": f.color,
+            "ubicacion": f.ubicacion,
+            "precio_referencia": float(f.precio_referencia),
+            "estado": f.estado,
+            "fecha_publicacion": f.fecha_publicacion,
+        }
+        for f in filas
+    ]

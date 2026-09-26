@@ -40,6 +40,10 @@ class CaballoRequest(BaseModel):
     # Exactamente uno de los dos: una raza existente o una escrita a mano ("Otro")
     id_raza: Optional[int] = None
     raza_personalizada: Optional[str] = None
+    # Solo obligatorios cuando sexo == "Macho" (se publica en el marketplace).
+    # La validación real de "obligatorio si es Macho" vive en el caso de uso.
+    titulo: Optional[str] = None
+    precio: Optional[float] = None
 
     @model_validator(mode="after")
     def validar_raza(self):
@@ -62,3 +66,17 @@ class CaballoResponse(BaseModel):
     ubicacion: str
     descripcion: str
     disponibilidad: str
+
+
+class PublicacionListItem(BaseModel):
+    id_publicacion: int
+    id_caballo: int
+    titulo: str
+    nombre: str
+    raza: str
+    sexo: str
+    color: str
+    ubicacion: str
+    precio_referencia: float
+    estado: str
+    fecha_publicacion: date

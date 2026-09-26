@@ -19,6 +19,9 @@ class RegistrarCaballoComando:
     disponibilidad: str
     id_raza: Optional[int] = None
     raza_personalizada: Optional[str] = None  # cuando el usuario eligió "Otro"
+    # Solo aplican cuando sexo == "Macho": el caballo también se publica en el marketplace.
+    titulo: Optional[str] = None
+    precio: Optional[float] = None
 
 
 class RegistrarCaballoPort(ABC):

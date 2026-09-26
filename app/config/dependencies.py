@@ -13,6 +13,9 @@ from app.infraestructure.adaptadores.outbound.argon2_password_hasher import (
 from app.infraestructure.adaptadores.outbound.persistence.caballo_repository_mysql import (
     CaballoRepositoryMySQL,
 )
+from app.infraestructure.adaptadores.outbound.persistence.publicacion_repository_mysql import (
+    PublicacionRepositoryMySQL,
+)
 from app.infraestructure.adaptadores.outbound.persistence.raza_repository_mysql import (
     RazaRepositoryMySQL,
 )
@@ -25,6 +28,7 @@ _usuario_repo = UsuarioRepositoryMySQL()
 _hasher = Argon2PasswordHasher()
 _caballo_repo = CaballoRepositoryMySQL()
 _raza_repo = RazaRepositoryMySQL()
+_publicacion_repo = PublicacionRepositoryMySQL()
 
 
 def get_login_use_case() -> LoginPort:
@@ -45,7 +49,12 @@ def get_registrar_caballo_use_case() -> RegistrarCaballoPort:
     return RegistrarCaballoUseCase(
         caballo_repo=_caballo_repo,
         raza_repo=_raza_repo,
+        publicacion_repo=_publicacion_repo,
     )
+
+
+def get_publicacion_repo():
+    return _publicacion_repo
 
 
 def get_usuario_repo():

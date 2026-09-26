@@ -6,6 +6,7 @@ from app.application.use_cases.registrar_use_case import EmailAlreadyExistsError
 
 from app.config.dependencies import (
     get_login_use_case,
+    get_publicacion_repo,
     get_registrar_caballo_use_case,
     get_registrar_use_case,
     get_usuario_repo,
@@ -26,11 +27,15 @@ from app.domain.ports.in_.registrar_usuario_port import (
 from app.domain.ports.out.usuario_repository_port import (
     UsuarioRepositoryPort,
 )
+from app.domain.ports.out.publicacion_repository_port import (
+    PublicacionRepositoryPort,
+)
 
 from app.infraestructure.adaptadores.inbound.rest.schemas import (
     CaballoRequest,
     CaballoResponse,
     LoginRequest,
+    PublicacionListItem,
     RegistrarRequest,
     UsuarioResponse,
 )
@@ -271,6 +276,8 @@ def registrar_caballo(
         disponibilidad=body.disponibilidad,
         id_raza=body.id_raza,
         raza_personalizada=body.raza_personalizada,
+        titulo=body.titulo,
+        precio=body.precio,
     )
 
     try:
@@ -291,3 +298,17 @@ def registrar_caballo(
         descripcion=caballo.descripcion,
         disponibilidad=caballo.disponibilidad,
     )
+
+
+# ======================================================
+# LISTAR PUBLICACIONES (MARKETPLACE)
+# ======================================================
+
+@caballos_router.get("", response_model=list[PublicacionListItem])
+def listar_publicaciones(
+    publicacion_repo: PublicacionRepositoryPort = Depends(get_publicacion_repo),
+):
+    try:
+        return publicacion_repo.find_all_activas()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

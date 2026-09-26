@@ -54,3 +54,19 @@ class CaballoModel(Base):
 
     raza = relationship("RazaModel")
     propietario = relationship("UsuarioModel")
+
+
+class PublicacionModel(Base):
+    __tablename__ = "Publicacion"
+
+    id_publicacion: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    caballo_id_caballo: Mapped[int] = mapped_column(ForeignKey("Caballo.id_caballo"), nullable=False)
+    usuario_id_usuario: Mapped[int] = mapped_column(ForeignKey("Usuario.id_usuario"), nullable=False)
+    titulo: Mapped[str] = mapped_column(String(150), nullable=False)
+    descripcion: Mapped[str] = mapped_column(Text, nullable=False)
+    fecha_publicacion: Mapped[date] = mapped_column(Date, nullable=False)
+    estado: Mapped[str] = mapped_column(String(30), nullable=False)
+    precio_referencia: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+
+    caballo = relationship("CaballoModel")
+    usuario = relationship("UsuarioModel")

@@ -1,8 +1,12 @@
+from datetime import date
+
 from app.domain.entities.Caballo import Caballo
+from app.domain.entities.Publicaciones import Publicacion
 from app.domain.entities.Raza import Raza
 from app.domain.exceptions import DatosInvalidosError
 from app.domain.ports.in_.registrar_caballo_port import RegistrarCaballoComando, RegistrarCaballoPort
 from app.domain.ports.out.caballo_repository_port import CaballoRepositoryPort
+from app.domain.ports.out.publicacion_repository_port import PublicacionRepositoryPort
 from app.domain.ports.out.raza_repository_port import RazaRepositoryPort
 
 SEXOS_VALIDOS = {"Macho", "Hembra"}
@@ -11,9 +15,15 @@ NOMBRE_RAZA_OTRO = "Otro"
 
 
 class RegistrarCaballoUseCase(RegistrarCaballoPort):
-    def __init__(self, caballo_repo: CaballoRepositoryPort, raza_repo: RazaRepositoryPort):
+    def __init__(
+        self,
+        caballo_repo: CaballoRepositoryPort,
+        raza_repo: RazaRepositoryPort,
+        publicacion_repo: PublicacionRepositoryPort,
+    ):
         self._caballo_repo = caballo_repo
         self._raza_repo = raza_repo
+        self._publicacion_repo = publicacion_repo
 
     def ejecutar(self, c: RegistrarCaballoComando) -> Caballo:
         nombre = c.nombre.strip()
@@ -39,6 +49,11 @@ class RegistrarCaballoUseCase(RegistrarCaballoPort):
             raise DatosInvalidosError("raza", "Selecciona una raza o escribe una en 'Otro'")
         if c.id_raza is not None and raza_personalizada:
             raise DatosInvalidosError("raza", "Elige una raza existente o escribe una en 'Otro', no ambas")
+
+        # Un caballo (Macho) se publica en el marketplace; una yegua solo se guarda.
+        if c.sexo == "Macho":
+            if c.precio is None or c.precio <= 0:
+                raise DatosInvalidosError("precio", "El precio debe ser mayor a 0")
 
         if raza_personalizada:
             # Cada "Otro" queda como su propia fila en Raza (nombre='Otro',
@@ -66,4 +81,19 @@ class RegistrarCaballoUseCase(RegistrarCaballoPort):
             descripcion=descripcion,
             disponibilidad=c.disponibilidad,
         )
-        return self._caballo_repo.create(caballo)
+        caballo_creado = self._caballo_repo.create(caballo)
+
+        if c.sexo == "Macho":
+            publicacion = Publicacion(
+                id_publicacion=None,
+                id_caballo=caballo_creado.id_caballo,
+                id_usuario=c.id_propietario,
+                titulo=nombre,
+                descripcion=descripcion,
+                precio_referencia=c.precio,
+                estado="Activa",
+                fecha_publicacion=date.today(),
+            )
+            self._publicacion_repo.create(publicacion)
+
+        return caballo_creado
