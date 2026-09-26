@@ -6,22 +6,27 @@ from app.infraestructure.adaptadores.inbound.rest import controller
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import engine
 
 
-app = FastAPI(title="DataHorse API")
+app = FastAPI(
+    title="DataHorse API",
+    version="0.1.0"
+)
 
 
-# Permitir conexión con Angular
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],
+    allow_origins=[
+        "http://localhost:4200",
+        "http://127.0.0.1:4200"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(controller.router, prefix="/api/v1")
 
-# Rutas de autenticación
+# POR AHORA SOLO ESTE ROUTER
 app.include_router(controller.router)
+app.include_router(controller.razas_router)
 
 
 @app.get("/")

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from sqlalchemy import text
 
 from app.application.use_cases.login_use_case import InvalidCredentialsError
 from app.application.use_cases.registrar_use_case import EmailAlreadyExistsError
@@ -17,12 +18,18 @@ from app.domain.ports.in_.registrar_usuario_port import (
     RegistrarUsuarioPort,
 )
 
-from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
+from app.domain.ports.out.usuario_repository_port import (
+    UsuarioRepositoryPort,
+)
 
 from app.infraestructure.adaptadores.inbound.rest.schemas import (
     LoginRequest,
     RegistrarRequest,
     UsuarioResponse,
+)
+
+from app.infraestructure.adaptadores.outbound.persistence.db_conexion import (
+    engine,
 )
 
 from app.infraestructure.adaptadores.outbound.security.jwt_handler import (
@@ -31,9 +38,20 @@ from app.infraestructure.adaptadores.outbound.security.jwt_handler import (
 )
 
 
+# ======================================================
+# ROUTERS
+# ======================================================
+
+# Rutas de autenticación
 router = APIRouter(
     prefix="/auth",
     tags=["auth"]
+)
+
+# Rutas de razas
+razas_router = APIRouter(
+    prefix="/razas",
+    tags=["razas"]
 )
 
 
@@ -86,7 +104,9 @@ def login(
 )
 def register(
     body: RegistrarRequest,
-    use_case: RegistrarUsuarioPort = Depends(get_registrar_use_case),
+    use_case: RegistrarUsuarioPort = Depends(
+        get_registrar_use_case
+    ),
 ):
     comando = RegistrarUsuarioComando(
         nombre=body.nombre,
@@ -128,7 +148,9 @@ def register(
 )
 def me(
     request: Request,
-    repo: UsuarioRepositoryPort = Depends(get_usuario_repo),
+    repo: UsuarioRepositoryPort = Depends(
+        get_usuario_repo
+    ),
 ):
     token = request.cookies.get("access_token")
 
@@ -146,7 +168,9 @@ def me(
             detail="Sesión inválida o expirada"
         )
 
-    usuario = repo.find_by_id(int(id_texto))
+    usuario = repo.find_by_id(
+        int(id_texto)
+    )
 
     if usuario is None:
         raise HTTPException(
@@ -159,3 +183,43 @@ def me(
         correo=usuario.correo,
         nombre=usuario.nombre
     )
+
+
+# ======================================================
+# LISTAR RAZAS
+# ======================================================
+
+@razas_router.get("")
+def listar_razas():
+    try:
+        with engine.connect() as connection:
+
+            resultado = connection.execute(
+                text("""
+                    SELECT
+                        id_raza,
+                        nombre,
+                        descripcion
+                    FROM raza
+                    ORDER BY nombre
+                """)
+            )
+
+            razas = []
+
+            for fila in resultado:
+                razas.append(
+                    {
+                        "id_raza": fila.id_raza,
+                        "nombre": fila.nombre,
+                        "descripcion": fila.descripcion
+                    }
+                )
+
+            return razas
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
