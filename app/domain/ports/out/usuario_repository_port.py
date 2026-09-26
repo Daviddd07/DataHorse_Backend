@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from app.domain.entities.Usuario import Usuario
 
 
-class  UsuarioRepositoryPort(ABC):
+class UsuarioRepositoryPort(ABC):
     @abstractmethod
-    def find_by_email(self, correo: str) -> Usuario | None:
-        ...
+    def create(self, usuario: Usuario) -> Usuario: ...
 
     @abstractmethod
-    def create(self, correo: str, password_hash: str, nombre: str) -> Usuario:
-        ...
+    def find_by_email(self, correo: str) -> Optional[Usuario]: ...
+    
+    @abstractmethod
+    def find_by_id(self, id_usuario: int) -> Optional[Usuario]: ...

@@ -3,8 +3,8 @@ from app.domain.ports.out.password_hasher_port import PasswordHasherPort
 from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
 
 
-class EmailAlreadyExistsError(Exception):
-    pass
+class InvalidCredentialsError(Exception):
+    """Correo o contraseña incorrectos."""
 
 
 class LoginUseCase(LoginPort):
@@ -13,13 +13,10 @@ class LoginUseCase(LoginPort):
         self.hasher = hasher
 
     def execute(self, correo: str, password: str) -> str:
-        usuario = self.usuario_repo.find_by_email(correo)
+        usuario = self.usuario_repo.find_by_email(correo.strip().lower())
 
-        # Mismo error exista o no el correo, para no filtrar qué correos
-        # están registrados (evita "user enumeration").
-        if usuario is None or not self.hasher.verify(password, usuario.password_hash):
-            raise EmailAlreadyExistsError("Correo o contraseña incorrectos")
+        # Mismo error exista o no el correo, para no filtrar qué correos están registrados.
+        if usuario is None or not self.hasher.verificar(password, usuario.contrasena):
+            raise InvalidCredentialsError("Correo o contraseña incorrectos")
 
-        return usuario.id
-class InvalidCredentialsError(Exception):
-    """Correo o contraseña incorrectos."""
+        return str(usuario.id_usuario)

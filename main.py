@@ -18,6 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(controller.router, prefix="/api/v1")
 
 # Rutas de autenticación
 app.include_router(controller.router)
