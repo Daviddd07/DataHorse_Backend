@@ -16,7 +16,6 @@ class RegistrarRequest(BaseModel):
     telefono: str | None = None
     ubicacion: str | None = None
 
-
 class UsuarioResponse(BaseModel):
     id: int
     correo: str
