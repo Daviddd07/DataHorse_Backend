@@ -792,3 +792,162 @@ async def subir_fotos(
         )
         for f in fotos
     ]
+    
+# ======================================================
+# DETALLE DE UNA PUBLICACIÓN
+# ======================================================
+
+@publicaciones_router.get("/{id_publicacion}")
+def obtener_publicacion_detalle(
+    id_publicacion: int,
+    request: Request,
+):
+    id_usuario_actual = _obtener_id_usuario_autenticado(request)
+
+    try:
+        with engine.connect() as connection:
+
+            # ==============================================
+            # DATOS DE LA PUBLICACIÓN + CABALLO + RAZA + PROPIETARIO
+            # ==============================================
+
+            publicacion = connection.execute(
+                text("""
+                    SELECT
+                        p.id_publicacion,
+                        p.titulo,
+                        p.descripcion,
+                        p.fecha_publicacion,
+                        p.estado,
+                        p.precio_referencia,
+                        p.usuario_id_usuario,
+
+                        c.id_caballo,
+                        c.nombre,
+                        c.sexo,
+                        c.fecha_nacimiento,
+                        c.altura,
+                        c.color,
+                        c.ubicacion,
+                        c.disponibilidad,
+
+                        r.id_raza,
+                        r.nombre AS raza,
+                        r.descripcion AS raza_descripcion,
+
+                        u.nombre AS propietario,
+                        u.ubicacion AS propietario_ubicacion,
+                        u.telefono AS propietario_telefono,
+
+                        EXISTS (
+                            SELECT 1
+                            FROM favorito f
+                            WHERE
+                                f.usuario_id_usuario = :id_usuario
+                                AND
+                                f.caballo_id_caballo = c.id_caballo
+                        ) AS es_favorita
+
+                    FROM publicacion p
+
+                    INNER JOIN caballo c
+                        ON p.caballo_id_caballo = c.id_caballo
+
+                    INNER JOIN raza r
+                        ON c.raza_id_raza = r.id_raza
+
+                    INNER JOIN usuario u
+                        ON p.usuario_id_usuario = u.id_usuario
+
+                    WHERE p.id_publicacion = :id_publicacion
+                """),
+                {
+                    "id_publicacion": id_publicacion,
+                    "id_usuario": id_usuario_actual,
+                },
+            ).first()
+
+            if publicacion is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Publicación no encontrada",
+                )
+
+            # ==============================================
+            # FOTOS DE LA PUBLICACIÓN (todas)
+            # ==============================================
+
+            fotos_resultado = connection.execute(
+                text("""
+                    SELECT
+                        id_foto,
+                        ruta,
+                        es_principal,
+                        orden
+                    FROM foto_caballo
+                    WHERE id_caballo = :id_caballo
+                    ORDER BY es_principal DESC, orden ASC
+                """),
+                {"id_caballo": publicacion.id_caballo},
+            )
+
+            fotos = [
+                {
+                    "id_foto": f.id_foto,
+                    "ruta": f"/{f.ruta}",
+                    "es_principal": bool(f.es_principal),
+                    "orden": f.orden,
+                }
+                for f in fotos_resultado
+            ]
+
+            # ==============================================
+            # RESPUESTA
+            # ==============================================
+
+            return {
+                "id_publicacion": publicacion.id_publicacion,
+                "id_caballo": publicacion.id_caballo,
+                "id_usuario": publicacion.usuario_id_usuario,
+
+                "titulo": publicacion.titulo,
+                "descripcion": publicacion.descripcion,
+                "fecha_publicacion": publicacion.fecha_publicacion,
+                "estado": publicacion.estado,
+
+                "nombre": publicacion.nombre,
+                "sexo": publicacion.sexo,
+                "fecha_nacimiento": publicacion.fecha_nacimiento,
+                "altura": float(publicacion.altura),
+                "color": publicacion.color,
+                "ubicacion": publicacion.ubicacion,
+                "disponibilidad": publicacion.disponibilidad,
+
+                "id_raza": publicacion.id_raza,
+                "raza": publicacion.raza,
+                "raza_descripcion": publicacion.raza_descripcion,
+
+                "propietario": publicacion.propietario,
+                "propietario_ubicacion": publicacion.propietario_ubicacion,
+                "propietario_telefono": publicacion.propietario_telefono,
+
+                "precio": (
+                    float(publicacion.precio_referencia)
+                    if publicacion.precio_referencia is not None
+                    else None
+                ),
+
+                "es_mia": publicacion.usuario_id_usuario == id_usuario_actual,
+                "es_favorita": bool(publicacion.es_favorita),
+
+                "fotos": fotos,
+            }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al consultar la publicación: {str(e)}",
+        )
