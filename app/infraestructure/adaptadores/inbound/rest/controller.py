@@ -48,7 +48,11 @@ from app.infraestructure.adaptadores.outbound.security.jwt_handler import (
     create_access_token,
     decode_access_token,
 )
-
+from typing import List
+from fastapi import UploadFile, File
+from app.infraestructure.adaptadores.inbound.rest.foto_schemas import FotoCaballoResponse
+from app.domain.services.subir_fotos_service import SubirFotosService
+from app.config.dependencies import get_subir_fotos_service
 
 # ======================================================
 # ROUTERS
@@ -312,3 +316,42 @@ def listar_publicaciones(
         return publicacion_repo.find_all_activas()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+# ======================================================
+# SUBIR FOTOS DE UN CABALLO
+# ======================================================
+
+@caballos_router.post(
+    "/{id_caballo}/fotos",
+    response_model=List[FotoCaballoResponse],
+)
+async def subir_fotos(
+    id_caballo: int,
+    files: List[UploadFile] = File(...),
+    service: SubirFotosService = Depends(get_subir_fotos_service),
+):
+    print(f"🔍 id_caballo={id_caballo}, cantidad files={len(files)}")   # 👈 temporal
+    for f in files:
+        print(f"   → {f.filename} | {f.content_type}")                   # 👈 temporal
+
+    archivos = []
+
+    for f in files:
+        contenido = await f.read()
+        archivos.append((f.filename, f.content_type, contenido))
+
+    try:
+        fotos = service.ejecutar(id_caballo, archivos)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return [
+        FotoCaballoResponse(
+            id_foto=f.id_foto,
+            ruta=f"/{f.ruta}",
+            es_principal=f.es_principal,
+            orden=f.orden,
+            fecha_subida=f.fecha_subida,
+        )
+        for f in fotos
+    ]

@@ -4,13 +4,16 @@ from sqlalchemy import text
 
 from app.infraestructure.adaptadores.inbound.rest import controller
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import engine
-
+from fastapi.staticfiles import StaticFiles
+from app.config.settings import UPLOAD_DIR
 
 app = FastAPI(
     title="DataHorse API",
     version="0.1.0"
 )
 
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,

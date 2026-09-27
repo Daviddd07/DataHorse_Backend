@@ -70,3 +70,15 @@ class PublicacionModel(Base):
 
     caballo = relationship("CaballoModel")
     usuario = relationship("UsuarioModel")
+    
+class FotoCaballoModel(Base):
+    __tablename__ = "foto_caballo"
+
+    id_foto: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id_caballo: Mapped[int] = mapped_column(
+        "id_caballo", ForeignKey("Caballo.id_caballo", ondelete="CASCADE"), nullable=False
+    )
+    ruta: Mapped[str] = mapped_column(String(500), nullable=False)
+    es_principal: Mapped[bool] = mapped_column(default=False, nullable=False)
+    orden: Mapped[int] = mapped_column(default=0, nullable=False)
+    fecha_subida: Mapped[date | None] = mapped_column(Date, nullable=True)

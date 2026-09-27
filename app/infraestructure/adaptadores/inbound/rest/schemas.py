@@ -44,6 +44,7 @@ class CaballoRequest(BaseModel):
     # La validación real de "obligatorio si es Macho" vive en el caso de uso.
     titulo: Optional[str] = None
     precio: Optional[float] = None
+    foto_principal: str | None = None
 
     @model_validator(mode="after")
     def validar_raza(self):
@@ -80,3 +81,18 @@ class PublicacionListItem(BaseModel):
     precio_referencia: float
     estado: str
     fecha_publicacion: date
+    
+class PublicacionListItem(BaseModel):
+    id_publicacion: int
+    id_caballo: int
+    titulo: str
+    nombre: str
+    raza: str
+    sexo: str
+    color: str
+    ubicacion: str
+    precio_referencia: float
+    estado: str
+    fecha_publicacion: date
+    foto_principal: Optional[str] = None
+    
