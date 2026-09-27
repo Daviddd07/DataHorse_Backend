@@ -565,6 +565,8 @@ def listar_publicaciones(request: Request):
 
                         u.nombre AS propietario,
 
+                        fc.ruta AS foto_ruta,
+
                         EXISTS (
                             SELECT 1
                             FROM favorito f
@@ -584,6 +586,10 @@ def listar_publicaciones(request: Request):
 
                     INNER JOIN usuario u
                         ON p.usuario_id_usuario = u.id_usuario
+
+                    LEFT JOIN foto_caballo fc
+                        ON fc.id_caballo = c.id_caballo
+                        AND fc.es_principal = TRUE
 
                     WHERE p.estado = 'Activa'
 
@@ -614,6 +620,13 @@ def listar_publicaciones(request: Request):
                     "propietario": fila.propietario,
                     "es_mia": fila.usuario_id_usuario == id_usuario_actual,
                     "es_favorita": bool(fila.es_favorita),
+
+       
+                    "foto_principal": (
+                        f"/{fila.foto_ruta}"
+                        if fila.foto_ruta
+                        else None
+                    ),
                 }
                 for fila in resultado
             ]
@@ -623,8 +636,6 @@ def listar_publicaciones(request: Request):
             status_code=500,
             detail=f"Error al consultar publicaciones: {str(e)}",
         )
-
-
 # ======================================================
 # AGREGAR FAVORITO
 # ======================================================
