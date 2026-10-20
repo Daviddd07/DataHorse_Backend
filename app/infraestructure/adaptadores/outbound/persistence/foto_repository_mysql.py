@@ -80,3 +80,71 @@ class FotoRepositoryMySQL(FotoRepository):
             orden=row.orden,
             fecha_subida=row.fecha_subida,
         )
+        
+    def obtener_por_id(self, id_foto: int) -> FotoCaballo | None:
+        row = self.db.execute(
+            text("""
+                SELECT id_foto, id_caballo, ruta, es_principal, orden, fecha_subida
+                FROM foto_caballo
+                WHERE id_foto = :id
+                LIMIT 1
+            """),
+            {"id": id_foto},
+        ).fetchone()
+
+        if not row:
+            return None
+
+        return FotoCaballo(
+            id_foto=row.id_foto,
+            id_caballo=row.id_caballo,
+            ruta=row.ruta,
+            es_principal=bool(row.es_principal),
+            orden=row.orden,
+            fecha_subida=row.fecha_subida,
+        )
+
+    def eliminar(self, id_foto: int) -> None:
+        self.db.execute(
+            text("DELETE FROM foto_caballo WHERE id_foto = :id"),
+            {"id": id_foto},
+        )
+        self.db.commit()
+
+    def promover_principal(self, id_caballo: int) -> None:
+        existe_principal = self.db.execute(
+            text("""
+                SELECT id_foto
+                FROM foto_caballo
+                WHERE id_caballo = :id AND es_principal = TRUE
+                LIMIT 1
+            """),
+            {"id": id_caballo},
+        ).fetchone()
+
+        if existe_principal is not None:
+            return
+
+        primera = self.db.execute(
+            text("""
+                SELECT id_foto
+                FROM foto_caballo
+                WHERE id_caballo = :id
+                ORDER BY orden ASC
+                LIMIT 1
+            """),
+            {"id": id_caballo},
+        ).fetchone()
+
+        if primera is None:
+            return
+
+        self.db.execute(
+            text("""
+                UPDATE foto_caballo
+                SET es_principal = TRUE
+                WHERE id_foto = :id
+            """),
+            {"id": primera.id_foto},
+        )
+        self.db.commit()

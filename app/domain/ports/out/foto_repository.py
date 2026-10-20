@@ -21,3 +21,18 @@ class FotoRepository(ABC):
     @abstractmethod
     def obtener_principal(self, id_caballo: int) -> FotoCaballo | None:
         ...
+        
+    @abstractmethod
+    def obtener_por_id(self, id_foto: int) -> FotoCaballo | None:
+        """Devuelve una foto por su id, o None si no existe."""
+        ...
+
+    @abstractmethod
+    def eliminar(self, id_foto: int) -> None:
+        """Elimina el registro de la foto. El archivo fisico se maneja aparte."""
+        ...
+
+    @abstractmethod
+    def promover_principal(self, id_caballo: int) -> None:
+        """Marca la primera foto restante como principal si no existe ninguna."""
+        ...

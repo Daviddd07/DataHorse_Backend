@@ -20,7 +20,6 @@ load_dotenv()
 
 SECRET_KEY = os.getenv(
     "SECRET_KEY",
-    "cambia-esto-en-produccion",
 )
 
 ALGORITHM = os.getenv(

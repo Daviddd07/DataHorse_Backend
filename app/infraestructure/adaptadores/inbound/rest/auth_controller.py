@@ -53,7 +53,7 @@ from app.infraestructure.adaptadores.outbound.security.jwt_handler import (
 # CONFIGURACIÓN
 # =========================================================
 
-load_dotenv()
+load_dotenv(override=True)
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
@@ -791,14 +791,9 @@ def login(
 def google_auth(
     body: GoogleAuthRequest,
     response: Response,
-    registrar: RegistrarUsuarioPort = Depends(
-        get_registrar_use_case
-    ),
-    repo: UsuarioRepositoryPort = Depends(
-        get_usuario_repo
-    ),
+    registrar: RegistrarUsuarioPort = Depends(get_registrar_use_case),
+    repo: UsuarioRepositoryPort = Depends(get_usuario_repo),
 ):
-
     if not GOOGLE_CLIENT_ID:
         raise HTTPException(
             status_code=500,
@@ -810,18 +805,10 @@ def google_auth(
             body.credential,
             google_requests.Request(),
             GOOGLE_CLIENT_ID,
-
-            # Pequeño margen para diferencias
-            # de reloj entre PC y Google.
             clock_skew_in_seconds=10,
         )
-
     except Exception as e:
-        print(
-            "ERROR GOOGLE:",
-            repr(e),
-        )
-
+        print("ERROR GOOGLE:", repr(e))
         raise HTTPException(
             status_code=401,
             detail="Token de Google inválido",
@@ -832,64 +819,35 @@ def google_auth(
     nombre = datos.get("name")
     verificado = datos.get("email_verified")
 
-    if not (
-        google_sub
-        and correo
-        and verificado
-    ):
+    if not (google_sub and correo and verificado):
         raise HTTPException(
             status_code=401,
             detail="La cuenta de Google no pudo verificarse",
         )
 
     correo = correo.strip().lower()
-    nombre = (
-        nombre.strip()
-        if nombre
-        else correo.split("@")[0]
-    )
+    nombre = nombre.strip() if nombre else correo.split("@")[0]
 
     # Buscar primero por identificador Google.
     with engine.connect() as connection:
         vinculo = connection.execute(
             text("""
                 SELECT usuario_id_usuario
-
                 FROM usuario_google
-
                 WHERE google_sub = :google_sub
             """),
-            {
-                "google_sub": google_sub
-            },
+            {"google_sub": google_sub},
         ).first()
 
     if vinculo:
-
-        usuario = repo.find_by_id(
-            int(vinculo.usuario_id_usuario)
-        )
-
+        usuario = repo.find_by_id(int(vinculo.usuario_id_usuario))
         if usuario is None:
-            raise HTTPException(
-                status_code=401,
-                detail="Usuario no encontrado",
-            )
-
+            raise HTTPException(status_code=401, detail="Usuario no encontrado")
     else:
-
-        # También permitimos vincular Google
-        # con una cuenta normal del mismo correo.
-        usuario = repo.find_by_email(
-            correo
-        )
+        usuario = repo.find_by_email(correo)
 
         if usuario is None:
-
-            password_interno = (
-                "Aa1!"
-                + secrets.token_urlsafe(32)
-            )
+            password_interno = "Aa1!" + secrets.token_urlsafe(32)
 
             try:
                 usuario = registrar.ejecutar(
@@ -901,11 +859,8 @@ def google_auth(
                         ubicacion=None,
                     )
                 )
-
             except EmailAlreadyExistsError:
-                usuario = repo.find_by_email(
-                    correo
-                )
+                usuario = repo.find_by_email(correo)
 
         if usuario is None:
             raise HTTPException(
@@ -914,31 +869,19 @@ def google_auth(
             )
 
         with engine.begin() as connection:
-
             otro_google = connection.execute(
                 text("""
                     SELECT google_sub
-
                     FROM usuario_google
-
                     WHERE usuario_id_usuario = :id_usuario
                 """),
-                {
-                    "id_usuario": usuario.id_usuario
-                },
+                {"id_usuario": usuario.id_usuario},
             ).first()
 
-            if (
-                otro_google
-                and
-                otro_google.google_sub != google_sub
-            ):
+            if otro_google and otro_google.google_sub != google_sub:
                 raise HTTPException(
                     status_code=409,
-                    detail=(
-                        "Esta cuenta ya está vinculada "
-                        "con otra cuenta de Google"
-                    ),
+                    detail="Esta cuenta ya está vinculada con otra cuenta de Google",
                 )
 
             if not otro_google:
@@ -964,29 +907,31 @@ def google_auth(
         connection.execute(
             text("""
                 UPDATE usuario
-
                 SET estado = 'activo'
-
                 WHERE id_usuario = :id_usuario
             """),
-            {
-                "id_usuario": usuario.id_usuario
-            },
+            {"id_usuario": usuario.id_usuario},
         )
 
-    _crear_cookie(
-        response,
-        usuario.id_usuario,
-    )
+    # 👇 AQUÍ ESTÁ EL DEBUG CORREGIDO 👇
+    try:
+        _crear_cookie(
+            response,
+            usuario.id_usuario,
+        )
 
-    return {
-        "mensaje": "Autenticación con Google exitosa",
-        "usuario": {
-            "id": usuario.id_usuario,
-            "nombre": usuario.nombre,
-            "correo": usuario.correo,
-        },
-    }
+        return {
+            "mensaje": "Autenticación con Google exitosa",
+            "usuario": {
+                "id": usuario.id_usuario,
+                "nombre": usuario.nombre,
+                "correo": usuario.correo,
+            },
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc() # Esto imprimirá el error real en la terminal
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # =========================================================
@@ -997,22 +942,12 @@ def google_auth(
 @router.post("/forgot-password")
 def forgot_password(
     body: CorreoRequest,
-    repo: UsuarioRepositoryPort = Depends(
-        get_usuario_repo
-    ),
+    repo: UsuarioRepositoryPort = Depends(get_usuario_repo),
 ):
-
-    usuario = repo.find_by_email(
-        body.correo.strip().lower()
-    )
-
-    # Respuesta genérica para no revelar
-    # si una cuenta existe.
+    usuario = repo.find_by_email(body.correo.strip().lower())
+    
     respuesta = {
-        "mensaje": (
-            "Si el correo está registrado, "
-            "recibirás un código."
-        )
+        "mensaje": "Si el correo está registrado, recibirás un código."
     }
 
     if usuario is None:
@@ -1026,8 +961,6 @@ def forgot_password(
     )
 
     return respuesta
-
-
 # =========================================================
 # RESTABLECER / CREAR CONTRASEÑA
 # =========================================================

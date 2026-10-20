@@ -38,7 +38,7 @@ class SubirFotosService:
                 raise ValueError(f"Extensión no permitida: {ext}")
 
             nombre_uuid = f"{uuid.uuid4().hex}{ext}"
-            ruta_fisica = FOTO_CALLO_DIR / nombre_uuid if False else FOTO_CABALLO_DIR / nombre_uuid
+            ruta_fisica = FOTO_CABALLO_DIR / nombre_uuid
 
             with open(ruta_fisica, "wb") as f:
                 f.write(contenido)
@@ -53,3 +53,13 @@ class SubirFotosService:
             guardadas.append(self.foto_repo.guardar(foto))
 
         return guardadas
+    
+    def eliminar_archivo(self, ruta_relativa: str) -> None:
+        nombre_archivo = Path(ruta_relativa).name
+        ruta_fisica = FOTO_CABALLO_DIR / nombre_archivo
+
+        if ruta_fisica.exists():
+            ruta_fisica.unlink()
+
+    def promover_principal(self, id_caballo: int) -> None:
+        self.foto_repo.promover_principal(id_caballo)

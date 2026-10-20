@@ -9,7 +9,7 @@ from app.infraestructure.adaptadores.outbound.persistence.db_tablas import (
 )
 from app.infraestructure.adaptadores.outbound.persistence.db_tablas import (
     CaballoModel,
-    FotoCaballoModel,        # 👈 nuevo
+    FotoCaballoModel,        #  nuevo
     PublicacionModel,
     RazaModel,
     UsuarioModel,
@@ -86,11 +86,11 @@ def obtener_publicaciones_activas(db: Session) -> list[dict]:
             CaballoModel.color,
             CaballoModel.ubicacion,
             RazaModel.nombre.label("raza_nombre"),
-            FotoCaballoModel.ruta.label("foto_ruta"),        # 👈 nuevo
+            FotoCaballoModel.ruta.label("foto_ruta"),        #  nuevo
         )
         .join(CaballoModel, PublicacionModel.caballo_id_caballo == CaballoModel.id_caballo)
         .join(RazaModel, CaballoModel.id_raza == RazaModel.id_raza)
-        .outerjoin(                                          # 👈 nuevo
+        .outerjoin(                                          #  nuevo
             FotoCaballoModel,
             (FotoCaballoModel.id_caballo == CaballoModel.id_caballo)
             & (FotoCaballoModel.es_principal == True),       # noqa: E712
@@ -114,7 +114,7 @@ def obtener_publicaciones_activas(db: Session) -> list[dict]:
             "precio_referencia": float(f.precio_referencia),
             "estado": f.estado,
             "fecha_publicacion": f.fecha_publicacion,
-            "foto_principal": f"/{f.foto_ruta}" if f.foto_ruta else None,   # 👈 nuevo
+            "foto_principal": f"/{f.foto_ruta}" if f.foto_ruta else None,   #  nuevo
         }
         for f in filas
     ]

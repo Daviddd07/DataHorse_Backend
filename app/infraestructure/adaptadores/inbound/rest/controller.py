@@ -68,7 +68,7 @@ from app.infraestructure.adaptadores.outbound.security.jwt_handler import (
     decode_access_token,
 )
 
-
+from app.domain.services.geocoding_service import GeocodingService
 # ======================================================
 # ROUTERS
 # ======================================================
@@ -93,6 +93,76 @@ publicaciones_router = APIRouter(
     tags=["publicaciones"],
 )
 
+# ======================================================
+# LISTAR UBICACIONES (departamentos y ciudades)
+# ======================================================
+
+@caballos_router.get("/ubicaciones/departamentos")
+def listar_departamentos():
+    try:
+        with engine.connect() as connection:
+            resultado = connection.execute(
+                text("""
+                    SELECT DISTINCT departamento
+                    FROM caballo
+                    WHERE departamento IS NOT NULL
+                      AND departamento != 'Sin departamento'
+                      AND disponibilidad != 'Eliminado'
+                    ORDER BY departamento ASC
+                """)
+            )
+
+            return [
+                {"departamento": fila.departamento}
+                for fila in resultado
+            ]
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al consultar departamentos: {str(e)}",
+        )
+
+
+@caballos_router.get("/ubicaciones/ciudades")
+def listar_ciudades(departamento: str | None = None):
+    try:
+        with engine.connect() as connection:
+            if departamento:
+                resultado = connection.execute(
+                    text("""
+                        SELECT DISTINCT ciudad
+                        FROM caballo
+                        WHERE ciudad IS NOT NULL
+                          AND ciudad != 'Sin ciudad'
+                          AND departamento = :departamento
+                          AND disponibilidad != 'Eliminado'
+                        ORDER BY ciudad ASC
+                    """),
+                    {"departamento": departamento},
+                )
+            else:
+                resultado = connection.execute(
+                    text("""
+                        SELECT DISTINCT ciudad
+                        FROM caballo
+                        WHERE ciudad IS NOT NULL
+                          AND ciudad != 'Sin ciudad'
+                          AND disponibilidad != 'Eliminado'
+                        ORDER BY ciudad ASC
+                    """)
+                )
+
+            return [
+                {"ciudad": fila.ciudad}
+                for fila in resultado
+            ]
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al consultar ciudades: {str(e)}",
+        )
 
 # ======================================================
 # REQUEST PUBLICACIÓN
@@ -416,6 +486,19 @@ def registrar_caballo(
 
             id_caballo = int(siguiente_caballo)
 
+                        # ==================================================
+            # GEOCODING DE LA UBICACION
+            # ==================================================
+
+            geocoding = GeocodingService()
+            datos_geo = geocoding.geocodificar(body.ubicacion)
+
+            ubicacion_lat = datos_geo["lat"] if datos_geo else None
+            ubicacion_lng = datos_geo["lng"] if datos_geo else None
+            ubicacion_texto = datos_geo["texto"] if datos_geo else body.ubicacion.strip()
+            ciudad = datos_geo["ciudad"] if datos_geo else None
+            departamento = datos_geo["departamento"] if datos_geo else None
+
             connection.execute(
                 text("""
                     INSERT INTO caballo (
@@ -426,6 +509,11 @@ def registrar_caballo(
                         altura,
                         color,
                         ubicacion,
+                        ubicacion_lat,
+                        ubicacion_lng,
+                        ubicacion_texto,
+                        ciudad,
+                        departamento,
                         descripcion,
                         disponibilidad,
                         raza_id_raza,
@@ -439,6 +527,11 @@ def registrar_caballo(
                         :altura,
                         :color,
                         :ubicacion,
+                        :ubicacion_lat,
+                        :ubicacion_lng,
+                        :ubicacion_texto,
+                        :ciudad,
+                        :departamento,
                         :descripcion,
                         :disponibilidad,
                         :raza_id_raza,
@@ -453,6 +546,11 @@ def registrar_caballo(
                     "altura": body.altura,
                     "color": body.color.strip(),
                     "ubicacion": body.ubicacion.strip(),
+                    "ubicacion_lat": ubicacion_lat,
+                    "ubicacion_lng": ubicacion_lng,
+                    "ubicacion_texto": ubicacion_texto,
+                    "ciudad": ciudad,
+                    "departamento": departamento,
                     "descripcion": body.descripcion.strip(),
                     "disponibilidad": body.disponibilidad,
                     "raza_id_raza": id_raza,
@@ -464,53 +562,67 @@ def registrar_caballo(
             # PUBLICACIÓN
             # ==================================================
 
-            siguiente_publicacion = connection.execute(
-                text("""
-                    SELECT
-                        COALESCE(MAX(id_publicacion), 0) + 1
-                    FROM publicacion
-                """)
-            ).scalar()
+                        # ==================================================
+            # PUBLICACIÓN (solo para Machos)
+            # ==================================================
 
-            id_publicacion = int(siguiente_publicacion)
+            id_publicacion = None
 
-            connection.execute(
-                text("""
-                    INSERT INTO publicacion (
-                        id_publicacion,
-                        titulo,
-                        descripcion,
-                        fecha_publicacion,
-                        estado,
-                        precio_referencia,
-                        caballo_id_caballo,
-                        usuario_id_usuario
-                    )
-                    VALUES (
-                        :id_publicacion,
-                        :titulo,
-                        :descripcion,
-                        :fecha_publicacion,
-                        :estado,
-                        :precio_referencia,
-                        :caballo_id_caballo,
-                        :usuario_id_usuario
-                    )
-                """),
-                {
-                    "id_publicacion": id_publicacion,
-                    "titulo": f"{body.nombre.strip()} - {body.sexo}",
-                    "descripcion": body.descripcion.strip(),
-                    "fecha_publicacion": date.today(),
-                    "estado": "Activa",
-                    "precio_referencia": precio_referencia,
-                    "caballo_id_caballo": id_caballo,
-                    "usuario_id_usuario": id_usuario,
-                },
-            )
+            if body.sexo == "Macho":
+
+                siguiente_publicacion = connection.execute(
+                    text("""
+                        SELECT
+                            COALESCE(MAX(id_publicacion), 0) + 1
+                        FROM publicacion
+                    """)
+                ).scalar()
+
+                id_publicacion = int(siguiente_publicacion)
+
+                connection.execute(
+                    text("""
+                        INSERT INTO publicacion (
+                            id_publicacion,
+                            titulo,
+                            descripcion,
+                            fecha_publicacion,
+                            estado,
+                            precio_referencia,
+                            caballo_id_caballo,
+                            usuario_id_usuario
+                        )
+                        VALUES (
+                            :id_publicacion,
+                            :titulo,
+                            :descripcion,
+                            :fecha_publicacion,
+                            :estado,
+                            :precio_referencia,
+                            :caballo_id_caballo,
+                            :usuario_id_usuario
+                        )
+                    """),
+                    {
+                        "id_publicacion": id_publicacion,
+                        "titulo": f"{body.nombre.strip()} - {body.sexo}",
+                        "descripcion": body.descripcion.strip(),
+                        "fecha_publicacion": date.today(),
+                        "estado": "Activa",
+                        "precio_referencia": precio_referencia,
+                        "caballo_id_caballo": id_caballo,
+                        "usuario_id_usuario": id_usuario,
+                    },
+                )
+                
+        mensaje = (
+            "Publicación registrada correctamente"
+            if body.sexo == "Macho"
+            else "Yegua registrada correctamente"
+        )
 
         return {
-            "mensaje": "Publicación registrada correctamente",
+            "mensaje": mensaje,
             "id_publicacion": id_publicacion,
             "id_caballo": id_caballo,
             "id_raza": id_raza,
@@ -557,6 +669,9 @@ def listar_publicaciones(request: Request):
                         c.fecha_nacimiento,
                         c.altura,
                         c.color,
+                        c.ubicacion_texto,
+                        c.ciudad,
+                        c.departamento,
                         c.ubicacion,
                         c.disponibilidad,
 
@@ -592,6 +707,7 @@ def listar_publicaciones(request: Request):
                         AND fc.es_principal = TRUE
 
                     WHERE p.estado = 'Activa'
+                      AND c.disponibilidad != 'Eliminado'
 
                     ORDER BY p.id_publicacion DESC
                 """),
@@ -607,6 +723,11 @@ def listar_publicaciones(request: Request):
                     "nombre": fila.nombre,
                     "raza": fila.raza,
                     "sexo": fila.sexo,
+                    "fecha_nacimiento": fila.fecha_nacimiento,
+                    "altura": float(fila.altura),
+                    "ubicacion_texto": fila.ubicacion_texto,
+                    "ciudad": fila.ciudad,
+                    "departamento": fila.departamento,
                     "ubicacion": fila.ubicacion,
                     "color": fila.color,
                     "descripcion": fila.descripcion,
@@ -860,6 +981,7 @@ def obtener_publicacion_detalle(
                         ON p.usuario_id_usuario = u.id_usuario
 
                     WHERE p.id_publicacion = :id_publicacion
+                      AND c.disponibilidad != 'Eliminado'
                 """),
                 {
                     "id_publicacion": id_publicacion,
@@ -950,4 +1072,534 @@ def obtener_publicacion_detalle(
         raise HTTPException(
             status_code=500,
             detail=f"Error al consultar la publicación: {str(e)}",
+        )
+        
+# ======================================================
+# MIS CABALLOS (todos los del usuario: machos y hembras)
+# ======================================================
+
+@caballos_router.get("/mios")
+def listar_mis_caballos(request: Request):
+    id_usuario = _obtener_id_usuario_autenticado(request)
+
+    try:
+        with engine.connect() as connection:
+
+            resultado = connection.execute(
+                text("""
+                    SELECT
+                        c.id_caballo,
+                        c.nombre,
+                        c.sexo,
+                        c.fecha_nacimiento,
+                        c.altura,
+                        c.color,
+                        c.ubicacion,
+                        c.ubicacion_texto,       
+                        c.ciudad,                    
+                        c.departamento, 
+                        c.descripcion,
+                        c.disponibilidad,
+
+                        r.id_raza,
+                        r.nombre AS raza,
+
+                        fc.ruta AS foto_ruta,
+
+                        p.id_publicacion,
+                        p.precio_referencia,
+                        p.estado AS estado_publicacion
+
+                    FROM caballo c
+
+                    INNER JOIN raza r
+                        ON c.raza_id_raza = r.id_raza
+
+                    LEFT JOIN foto_caballo fc
+                        ON fc.id_caballo = c.id_caballo
+                        AND fc.es_principal = TRUE
+
+                    LEFT JOIN publicacion p
+                        ON p.caballo_id_caballo = c.id_caballo
+                        AND p.estado = 'Activa'
+
+                    WHERE c.usuario_id_usuario = :id_usuario
+                      AND c.disponibilidad != 'Eliminado'
+
+                    ORDER BY c.id_caballo DESC
+                """),
+                {"id_usuario": id_usuario},
+            )
+
+            return [
+                {
+                    "id_caballo": fila.id_caballo,
+                    "nombre": fila.nombre,
+                    "sexo": fila.sexo,
+                    "fecha_nacimiento": fila.fecha_nacimiento,
+                    "altura": float(fila.altura),
+                    "color": fila.color,
+                    "ubicacion": fila.ubicacion,
+                    "ubicacion_texto": fila.ubicacion_texto,     
+                    "ciudad": fila.ciudad,                      
+                    "departamento": fila.departamento,
+                    "descripcion": fila.descripcion,
+                    "disponibilidad": fila.disponibilidad,
+
+                    "id_raza": fila.id_raza,
+                    "raza": fila.raza,
+
+                    "foto_principal": (
+                        f"/{fila.foto_ruta}"
+                        if fila.foto_ruta
+                        else None
+                    ),
+
+                    "id_publicacion": fila.id_publicacion,
+                    "precio": (
+                        float(fila.precio_referencia)
+                        if fila.precio_referencia is not None
+                        else None
+                    ),
+                    "publicado": fila.id_publicacion is not None,
+                }
+                for fila in resultado
+            ]
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al consultar tus caballos: {str(e)}",
+        )
+        
+        # ======================================================
+# OBTENER UN CABALLO (para edicion)
+# ======================================================
+
+@caballos_router.get("/{id_caballo}")
+def obtener_caballo(
+    id_caballo: int,
+    request: Request,
+):
+    id_usuario = _obtener_id_usuario_autenticado(request)
+
+    try:
+        with engine.connect() as connection:
+
+            caballo = connection.execute(
+                text("""
+                    SELECT
+                        c.id_caballo,
+                        c.nombre,
+                        c.sexo,
+                        c.fecha_nacimiento,
+                        c.altura,
+                        c.color,
+                        c.ubicacion,
+                        c.ubicacion_texto,        
+                        c.ciudad,                 
+                        c.departamento, 
+                        c.descripcion,
+                        c.disponibilidad,
+                        c.raza_id_raza,
+                        r.nombre AS raza,
+                        p.id_publicacion,
+                        p.precio_referencia
+                    FROM caballo c
+                    INNER JOIN raza r
+                        ON c.raza_id_raza = r.id_raza
+                    LEFT JOIN publicacion p
+                        ON p.caballo_id_caballo = c.id_caballo
+                        AND p.estado = 'Activa'
+                    WHERE c.id_caballo = :id_caballo
+                      AND c.usuario_id_usuario = :id_usuario
+                      AND c.disponibilidad != 'Eliminado'
+                """),
+                {
+                    "id_caballo": id_caballo,
+                    "id_usuario": id_usuario,
+                },
+            ).first()
+
+            if caballo is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Caballo no encontrado",
+                )
+
+            fotos_resultado = connection.execute(
+                text("""
+                    SELECT id_foto, ruta, es_principal, orden
+                    FROM foto_caballo
+                    WHERE id_caballo = :id_caballo
+                    ORDER BY es_principal DESC, orden ASC
+                """),
+                {"id_caballo": id_caballo},
+            )
+
+            fotos = [
+                {
+                    "id_foto": f.id_foto,
+                    "ruta": f"/{f.ruta}",
+                    "es_principal": bool(f.es_principal),
+                    "orden": f.orden,
+                }
+                for f in fotos_resultado
+            ]
+
+            return {
+                "id_caballo": caballo.id_caballo,
+                "nombre": caballo.nombre,
+                "sexo": caballo.sexo,
+                "fecha_nacimiento": caballo.fecha_nacimiento,
+                "altura": float(caballo.altura),
+                "color": caballo.color,
+                "ubicacion": caballo.ubicacion,
+                 "ubicacion_texto": caballo.ubicacion_texto,    
+                "ciudad": caballo.ciudad,                       
+                "departamento": caballo.departamento,     
+                "descripcion": caballo.descripcion,
+                "disponibilidad": caballo.disponibilidad,
+                "id_raza": caballo.raza_id_raza,
+                "raza": caballo.raza,
+                "id_publicacion": caballo.id_publicacion,
+                "precio": (
+                    float(caballo.precio_referencia)
+                    if caballo.precio_referencia is not None
+                    else None
+                ),
+                "fotos": fotos,
+            }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al consultar el caballo: {str(e)}",
+        )
+
+
+# ======================================================
+# ACTUALIZAR UN CABALLO
+# ======================================================
+
+class CaballoUpdateRequest(BaseModel):
+    id_raza: int | None = None
+    raza_personalizada: str | None = None
+
+    nombre: str
+    fecha_nacimiento: date
+    altura: float
+    color: str
+    ubicacion: str
+    descripcion: str
+    disponibilidad: str
+
+    precio: float | None = None
+
+
+@caballos_router.put("/{id_caballo}")
+def actualizar_caballo(
+    id_caballo: int,
+    body: CaballoUpdateRequest,
+    request: Request,
+):
+    id_usuario = _obtener_id_usuario_autenticado(request)
+
+    if not body.nombre.strip():
+        raise HTTPException(422, "El nombre es obligatorio")
+
+    if body.altura <= 0:
+        raise HTTPException(422, "La altura debe ser mayor que cero")
+
+    if body.disponibilidad not in ("Disponible", "No disponible"):
+        raise HTTPException(422, "Disponibilidad invalida")
+
+    try:
+        with engine.begin() as connection:
+
+            caballo = connection.execute(
+                text("""
+                    SELECT id_caballo, sexo, disponibilidad
+                    FROM caballo
+                    WHERE id_caballo = :id
+                      AND usuario_id_usuario = :uid
+                """),
+                {"id": id_caballo, "uid": id_usuario},
+            ).first()
+
+            if caballo is None:
+                raise HTTPException(404, "Caballo no encontrado")
+
+            if caballo.disponibilidad == "Eliminado":
+                raise HTTPException(404, "Caballo no encontrado")
+
+            es_macho = caballo.sexo == "Macho"
+
+            # Raza: existente o nueva
+            id_raza = body.id_raza
+
+            if body.raza_personalizada and body.raza_personalizada.strip():
+                siguiente_raza = connection.execute(
+                    text("SELECT COALESCE(MAX(id_raza), 0) + 1 FROM raza")
+                ).scalar()
+
+                id_raza = int(siguiente_raza)
+
+                connection.execute(
+                    text("""
+                        INSERT INTO raza (id_raza, nombre, descripcion)
+                        VALUES (:id_raza, :nombre, :descripcion)
+                    """),
+                    {
+                        "id_raza": id_raza,
+                        "nombre": body.raza_personalizada.strip(),
+                        "descripcion": "Raza registrada desde edicion",
+                    },
+                )
+
+            if id_raza is None:
+                raise HTTPException(422, "Debes seleccionar una raza")
+
+            precio_referencia = body.precio if es_macho else None
+
+            if es_macho and (precio_referencia is None or precio_referencia <= 0):
+                raise HTTPException(422, "Debes ingresar un precio valido")
+
+                        # ==================================================
+            # GEOCODING DE LA UBICACION (si cambio)
+            # ==================================================
+
+            ubicacion_anterior = connection.execute(
+                text("""
+                    SELECT ubicacion
+                    FROM caballo
+                    WHERE id_caballo = :id_caballo
+                """),
+                {"id_caballo": id_caballo},
+            ).scalar()
+
+            ubicacion_lat = None
+            ubicacion_lng = None
+            ubicacion_texto = body.ubicacion.strip()
+            ciudad = None
+            departamento = None
+
+            if ubicacion_anterior != body.ubicacion.strip():
+                geocoding = GeocodingService()
+                datos_geo = geocoding.geocodificar(body.ubicacion)
+
+                if datos_geo:
+                    ubicacion_lat = datos_geo["lat"]
+                    ubicacion_lng = datos_geo["lng"]
+                    ubicacion_texto = datos_geo["texto"]
+                    ciudad = datos_geo["ciudad"]
+                    departamento = datos_geo["departamento"]
+
+            connection.execute(
+                text("""
+                    UPDATE caballo
+                    SET
+                        nombre = :nombre,
+                        fecha_nacimiento = :fecha_nacimiento,
+                        altura = :altura,
+                        color = :color,
+                        ubicacion = :ubicacion,
+                        ubicacion_lat = COALESCE(:ubicacion_lat, ubicacion_lat),
+                        ubicacion_lng = COALESCE(:ubicacion_lng, ubicacion_lng),
+                        ubicacion_texto = :ubicacion_texto,
+                        ciudad = COALESCE(:ciudad, ciudad),
+                        departamento = COALESCE(:departamento, departamento),
+                        descripcion = :descripcion,
+                        disponibilidad = :disponibilidad,
+                        raza_id_raza = :raza_id_raza
+                    WHERE id_caballo = :id_caballo
+                """),
+                {
+                    "nombre": body.nombre.strip(),
+                    "fecha_nacimiento": body.fecha_nacimiento,
+                    "altura": body.altura,
+                    "color": body.color.strip(),
+                    "ubicacion": body.ubicacion.strip(),
+                    "ubicacion_lat": ubicacion_lat,
+                    "ubicacion_lng": ubicacion_lng,
+                    "ubicacion_texto": ubicacion_texto,
+                    "ciudad": ciudad,
+                    "departamento": departamento,
+                    "descripcion": body.descripcion.strip(),
+                    "disponibilidad": body.disponibilidad,
+                    "raza_id_raza": id_raza,
+                    "id_caballo": id_caballo,
+                },
+            )
+
+            # Reflejar cambios en la publicacion si es macho
+            if es_macho:
+                connection.execute(
+                    text("""
+                        UPDATE publicacion
+                        SET
+                            titulo = :titulo,
+                            descripcion = :descripcion,
+                            precio_referencia = :precio
+                        WHERE caballo_id_caballo = :id_caballo
+                          AND estado = 'Activa'
+                    """),
+                    {
+                        "titulo": f"{body.nombre.strip()} - Macho",
+                        "descripcion": body.descripcion.strip(),
+                        "precio": precio_referencia,
+                        "id_caballo": id_caballo,
+                    },
+                )
+
+        return {
+            "mensaje": "Caballo actualizado correctamente",
+            "id_caballo": id_caballo,
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al actualizar el caballo: {str(e)}",
+        )
+
+
+# ======================================================
+# ELIMINAR UN CABALLO
+# (soft delete del caballo, hard delete de la publicacion)
+# ======================================================
+
+@caballos_router.delete("/{id_caballo}")
+def eliminar_caballo(
+    id_caballo: int,
+    request: Request,
+):
+    id_usuario = _obtener_id_usuario_autenticado(request)
+
+    try:
+        with engine.begin() as connection:
+
+            caballo = connection.execute(
+                text("""
+                    SELECT id_caballo, disponibilidad
+                    FROM caballo
+                    WHERE id_caballo = :id
+                      AND usuario_id_usuario = :uid
+                """),
+                {"id": id_caballo, "uid": id_usuario},
+            ).first()
+
+            if caballo is None:
+                raise HTTPException(404, "Caballo no encontrado")
+
+            if caballo.disponibilidad == "Eliminado":
+                raise HTTPException(404, "Caballo no encontrado")
+
+            connection.execute(
+                text("""
+                    DELETE FROM publicacion
+                    WHERE caballo_id_caballo = :id_caballo
+                """),
+                {"id_caballo": id_caballo},
+            )
+
+            connection.execute(
+                text("""
+                    UPDATE caballo
+                    SET disponibilidad = 'Eliminado'
+                    WHERE id_caballo = :id_caballo
+                """),
+                {"id_caballo": id_caballo},
+            )
+
+        return {
+            "mensaje": "Caballo eliminado correctamente",
+            "id_caballo": id_caballo,
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al eliminar el caballo: {str(e)}",
+        )
+
+
+# ======================================================
+# ELIMINAR UNA FOTO
+# ======================================================
+
+@caballos_router.delete("/{id_caballo}/fotos/{id_foto}")
+def eliminar_foto(
+    id_caballo: int,
+    id_foto: int,
+    request: Request,
+    service: SubirFotosService = Depends(get_subir_fotos_service),
+):
+    id_usuario = _obtener_id_usuario_autenticado(request)
+
+    try:
+        with engine.begin() as connection:
+
+            caballo = connection.execute(
+                text("""
+                    SELECT id_caballo, disponibilidad
+                    FROM caballo
+                    WHERE id_caballo = :id
+                      AND usuario_id_usuario = :uid
+                """),
+                {"id": id_caballo, "uid": id_usuario},
+            ).first()
+
+            if caballo is None:
+                raise HTTPException(404, "Caballo no encontrado")
+
+            if caballo.disponibilidad == "Eliminado":
+                raise HTTPException(404, "Caballo no encontrado")
+
+            foto = connection.execute(
+                text("""
+                    SELECT id_foto, ruta
+                    FROM foto_caballo
+                    WHERE id_foto = :id_foto
+                      AND id_caballo = :id_caballo
+                """),
+                {"id_foto": id_foto, "id_caballo": id_caballo},
+            ).first()
+
+            if foto is None:
+                raise HTTPException(404, "Foto no encontrada")
+
+            connection.execute(
+                text("DELETE FROM foto_caballo WHERE id_foto = :id_foto"),
+                {"id_foto": id_foto},
+            )
+
+        try:
+            service.eliminar_archivo(foto.ruta)
+        except Exception as e:
+            print(f"No se pudo borrar archivo fisico: {e}")
+
+        service.promover_principal(id_caballo)
+
+        return {
+            "mensaje": "Foto eliminada correctamente",
+            "id_foto": id_foto,
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al eliminar la foto: {str(e)}",
         )
