@@ -7,17 +7,17 @@ from app.infraestructure.adaptadores.outbound.persistence.db_conexion import Bas
 
 
 class RolModel(Base):
-    __tablename__ = "Rol"
+    __tablename__ = "rol"
 
     id_rol: Mapped[int] = mapped_column(Integer, primary_key=True)
     nombre_rol: Mapped[str] = mapped_column(String(80), nullable=False)
 
 
 class UsuarioModel(Base):
-    __tablename__ = "Usuario"
+    __tablename__ = "usuario"
 
     id_usuario: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    rol_id_rol: Mapped[int] = mapped_column(ForeignKey("Rol.id_rol"), nullable=False)
+    rol_id_rol: Mapped[int] = mapped_column(ForeignKey("rol.id_rol"), nullable=False)
     nombre: Mapped[str] = mapped_column(String(120), nullable=False)
     correo: Mapped[str] = mapped_column(String(180), nullable=False, unique=True)
     contrasena: Mapped[str] = mapped_column("contraseña", String(255), nullable=False)
@@ -35,7 +35,7 @@ class UsuarioModel(Base):
 
 
 class RazaModel(Base):
-    __tablename__ = "Raza"
+    __tablename__ = "raza"
 
     id_raza: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nombre: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -43,11 +43,11 @@ class RazaModel(Base):
 
 
 class CaballoModel(Base):
-    __tablename__ = "Caballo"
+    __tablename__ = "caballo"
 
     id_caballo: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    id_raza: Mapped[int] = mapped_column("raza_id_raza", ForeignKey("Raza.id_raza"), nullable=False)
-    id_propietario: Mapped[int] = mapped_column("usuario_id_usuario", ForeignKey("Usuario.id_usuario"), nullable=False)
+    id_raza: Mapped[int] = mapped_column("raza_id_raza", ForeignKey("raza.id_raza"), nullable=False)
+    id_propietario: Mapped[int] = mapped_column("usuario_id_usuario", ForeignKey("usuario.id_usuario"), nullable=False)
     nombre: Mapped[str] = mapped_column(String(120), nullable=False)
     sexo: Mapped[str] = mapped_column(String(20), nullable=False)
     fecha_nacimiento: Mapped[date] = mapped_column(Date, nullable=False)
@@ -62,11 +62,11 @@ class CaballoModel(Base):
 
 
 class PublicacionModel(Base):
-    __tablename__ = "Publicacion"
+    __tablename__ = "publicacion"
 
     id_publicacion: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    caballo_id_caballo: Mapped[int] = mapped_column(ForeignKey("Caballo.id_caballo"), nullable=False)
-    usuario_id_usuario: Mapped[int] = mapped_column(ForeignKey("Usuario.id_usuario"), nullable=False)
+    caballo_id_caballo: Mapped[int] = mapped_column(ForeignKey("caballo.id_caballo"), nullable=False)
+    usuario_id_usuario: Mapped[int] = mapped_column(ForeignKey("usuario.id_usuario"), nullable=False)
     titulo: Mapped[str] = mapped_column(String(150), nullable=False)
     descripcion: Mapped[str] = mapped_column(Text, nullable=False)
     fecha_publicacion: Mapped[date] = mapped_column(Date, nullable=False)
@@ -81,9 +81,10 @@ class FotoCaballoModel(Base):
 
     id_foto: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     id_caballo: Mapped[int] = mapped_column(
-        "id_caballo", ForeignKey("Caballo.id_caballo", ondelete="CASCADE"), nullable=False
+        "id_caballo", ForeignKey("caballo.id_caballo", ondelete="CASCADE"), nullable=False
     )
     ruta: Mapped[str] = mapped_column(String(500), nullable=False)
     es_principal: Mapped[bool] = mapped_column(default=False, nullable=False)
     orden: Mapped[int] = mapped_column(default=0, nullable=False)
     fecha_subida: Mapped[date | None] = mapped_column(Date, nullable=True)
+

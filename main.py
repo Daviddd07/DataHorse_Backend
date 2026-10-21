@@ -47,6 +47,28 @@ app = FastAPI(
 
 
 # ======================================================
+# RESPUESTAS EXITOSAS ESTANDARIZADAS
+# ======================================================
+
+def success_response(
+    data=None,
+    message="Operación realizada correctamente",
+    status_code=200,
+):
+
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "success": True,
+            "status": status_code,
+            "message": message,
+            "data": data,
+        },
+        media_type="application/json",
+    )
+
+
+# ======================================================
 # NORMALIZACIÓN DE ERRORES
 # ======================================================
 
@@ -236,10 +258,13 @@ app.include_router(
 @app.get("/")
 def root():
 
-    return {
-        "status": "ok",
-        "mensaje": "DataHorse API funcionando",
-    }
+    return success_response(
+        message="DataHorse API funcionando correctamente",
+        data={
+            "service": "DataHorse API",
+            "version": "0.1.0",
+        },
+    )
 
 
 # ======================================================
@@ -249,9 +274,12 @@ def root():
 @app.get("/api/v1/ping")
 def ping():
 
-    return {
-        "mensaje": "Conexión exitosa con FastAPI",
-    }
+    return success_response(
+        message="Conexión exitosa con FastAPI",
+        data={
+            "status": "ok",
+        },
+    )
 
 
 # ======================================================
@@ -269,15 +297,15 @@ def test_database():
                 text("SELECT 1")
             )
 
+        return success_response(
+            message="Conexión exitosa con MySQL",
+            data={
+                "status": "ok",
+                "base_datos": "datahorse2",
+            },
+        )
 
-        return {
-            "status": "ok",
-            "mensaje": "Conexión exitosa con MySQL",
-            "base_datos": "datahorse2",
-        }
-
-
-    except Exception as e:
+    except Exception:
 
         raise HTTPException(
             status_code=500,
