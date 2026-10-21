@@ -8,6 +8,7 @@ from app.domain.ports.out.password_hasher_port import PasswordHasherPort
 from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
 from app.domain.services.validador_usuario import validar_registro
 
+from app.domain.services.geocoding_service import GeocodingService
 
 class RegistrarUseCase(RegistrarUsuarioPort):
     def __init__(self, repositorio: UsuarioRepositoryPort, hasher: PasswordHasherPort):

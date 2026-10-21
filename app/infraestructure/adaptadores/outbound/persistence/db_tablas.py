@@ -25,6 +25,11 @@ class UsuarioModel(Base):
     ubicacion: Mapped[str | None] = mapped_column(String(180), nullable=True)
     fecha_registro: Mapped[date] = mapped_column(Date, nullable=False)
     estado: Mapped[str] = mapped_column(String(30), nullable=False)
+    ubicacion_lat: Mapped[float | None] = mapped_column(Numeric(10, 8), nullable=True)
+    ubicacion_lng: Mapped[float | None] = mapped_column(Numeric(11, 8), nullable=True)
+    ubicacion_texto: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ciudad: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    departamento: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     rol = relationship("RolModel")
 

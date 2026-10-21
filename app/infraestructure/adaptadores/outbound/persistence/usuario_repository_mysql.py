@@ -63,6 +63,14 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
                 contrasena=usuario.contrasena,
                 telefono=usuario.telefono,
                 ubicacion=usuario.ubicacion,
+                
+          
+                ubicacion_lat=usuario.ubicacion_lat,
+                ubicacion_lng=usuario.ubicacion_lng,
+                ubicacion_texto=usuario.ubicacion_texto,
+                ciudad=usuario.ciudad,
+                departamento=usuario.departamento,
+                
                 fecha_registro=usuario.fecha_registro,
                 estado=usuario.estado
             )
@@ -90,6 +98,14 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
             contrasena=usuario_db.contrasena,
             telefono=usuario_db.telefono,
             ubicacion=usuario_db.ubicacion,
+            
+            
+            ubicacion_lat=usuario_db.ubicacion_lat,
+            ubicacion_lng=usuario_db.ubicacion_lng,
+            ubicacion_texto=usuario_db.ubicacion_texto,
+            ciudad=usuario_db.ciudad,
+            departamento=usuario_db.departamento,
+            
             fecha_registro=usuario_db.fecha_registro,
             estado=usuario_db.estado
         )

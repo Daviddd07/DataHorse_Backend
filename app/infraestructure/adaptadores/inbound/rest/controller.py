@@ -672,6 +672,8 @@ def listar_publicaciones(request: Request):
                         c.ubicacion_texto,
                         c.ciudad,
                         c.departamento,
+                        c.ubicacion_lat,
+                        c.ubicacion_lng,
                         c.ubicacion,
                         c.disponibilidad,
 
@@ -728,6 +730,8 @@ def listar_publicaciones(request: Request):
                     "ubicacion_texto": fila.ubicacion_texto,
                     "ciudad": fila.ciudad,
                     "departamento": fila.departamento,
+                    "ubicacion_lat": float(fila.ubicacion_lat) if fila.ubicacion_lat else None,
+                    "ubicacion_lng": float(fila.ubicacion_lng) if fila.ubicacion_lng else None,
                     "ubicacion": fila.ubicacion,
                     "color": fila.color,
                     "descripcion": fila.descripcion,
