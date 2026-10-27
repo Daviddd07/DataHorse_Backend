@@ -1,19 +1,17 @@
-# Entorno virtual
-venv/
-.venv/
-
 # Python
+backend/venv/
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
+
+# Angular / Node
+frontend/node_modules/
+frontend/.angular/
 
 # Variables de entorno
 .env
 
-# VS Code
-.vscode/
-
 # Sistema
 .DS_Store
 Thumbs.db
+.env
+backups/
