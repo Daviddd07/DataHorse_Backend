@@ -126,13 +126,15 @@ def _crear_cookie(
     token = create_access_token(
         id_usuario
     )
+    
+    is_production = os.getenv("ENVIRONMENT") == "production"
 
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,       # True cuando uses HTTPS
-        samesite="lax",
+        secure=is_production,                      
+        samesite="none" if is_production else "lax", 
         max_age=1800,
     )
 
@@ -1065,12 +1067,15 @@ def me(
 def logout(
     response: Response,
 ):
+   
+    is_production = os.getenv("ENVIRONMENT") == "production"
 
     response.delete_cookie(
         key="access_token",
         httponly=True,
-        secure=False,
-        samesite="lax",
+      
+        secure=is_production,
+        samesite="none" if is_production else "lax",
     )
 
     return {

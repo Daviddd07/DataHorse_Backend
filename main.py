@@ -35,6 +35,8 @@ from app.config.settings import (
     UPLOAD_DIR,
 )
 
+import os
+
 
 # ======================================================
 # APLICACIÓN
@@ -197,18 +199,16 @@ app.mount(
 # CORS
 # ======================================================
 
+origenes_permitidos = os.getenv(
+    "ALLOWED_ORIGINS", 
+    "http://localhost:4200,http://127.0.0.1:4200"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-
-    allow_origins=[
-        "http://localhost:4200",
-        "http://127.0.0.1:4200",
-    ],
-
+    allow_origins=origenes_permitidos,
     allow_credentials=True,
-
     allow_methods=["*"],
-
     allow_headers=["*"],
 )
 
