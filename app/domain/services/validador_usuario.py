@@ -4,7 +4,7 @@ from typing import Optional
 
 from app.domain.exceptions import EmailAlreadyExistsError
 
-RE_CORREO = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$")
+RE_CORREO = re.compile(r"^[^\s@]{1,64}@[^\s@]{1,100}(?:\.[^\s@]{2,63})+$")
 RE_TELEFONO = re.compile(r"^\+?[0-9 ()-]{7,30}$")
 
 

@@ -1,4 +1,4 @@
-import hashlib
+﻿import hashlib
 import hmac
 import os
 import secrets
@@ -50,7 +50,7 @@ from app.infraestructure.adaptadores.outbound.security.jwt_handler import (
 
 
 # =========================================================
-# CONFIGURACIÓN
+# CONFIGURACIÃ“N
 # =========================================================
 
 load_dotenv(override=True)
@@ -75,7 +75,7 @@ MAX_INTENTOS_CODIGO = 5
 
 router = APIRouter(
     prefix="/auth",
-    tags=["Autenticación"],
+    tags=["AutenticaciÃ³n"],
 )
 
 
@@ -160,7 +160,7 @@ def _usuario_actual_id(
     if id_usuario is None:
         raise HTTPException(
             status_code=401,
-            detail="Sesión inválida o expirada",
+            detail="SesiÃ³n invÃ¡lida o expirada",
         )
 
     try:
@@ -169,7 +169,7 @@ def _usuario_actual_id(
     except (ValueError, TypeError):
         raise HTTPException(
             status_code=401,
-            detail="Sesión inválida",
+            detail="SesiÃ³n invÃ¡lida",
         )
 
 
@@ -184,7 +184,7 @@ def _hash_codigo(
     if not CODIGO_SECRET:
         raise HTTPException(
             status_code=500,
-            detail="CODIGO_SECRET no está configurado",
+            detail="CODIGO_SECRET no estÃ¡ configurado",
         )
 
     return hmac.new(
@@ -200,25 +200,25 @@ def _validar_password(
     if len(password) < 8:
         raise HTTPException(
             status_code=422,
-            detail="La contraseña debe tener mínimo 8 caracteres",
+            detail="La contraseÃ±a debe tener mÃ­nimo 8 caracteres",
         )
 
     if not any(c.isupper() for c in password):
         raise HTTPException(
             status_code=422,
-            detail="La contraseña debe incluir una mayúscula",
+            detail="La contraseÃ±a debe incluir una mayÃºscula",
         )
 
     if not any(c.islower() for c in password):
         raise HTTPException(
             status_code=422,
-            detail="La contraseña debe incluir una minúscula",
+            detail="La contraseÃ±a debe incluir una minÃºscula",
         )
 
     if not any(c.isdigit() for c in password):
         raise HTTPException(
             status_code=422,
-            detail="La contraseña debe incluir un número",
+            detail="La contraseÃ±a debe incluir un nÃºmero",
         )
 
 
@@ -242,23 +242,23 @@ def _enviar_codigo(
     ):
         raise HTTPException(
             status_code=500,
-            detail="Mailjet no está configurado completamente",
+            detail="Mailjet no estÃ¡ configurado completamente",
         )
 
     if tipo == "REGISTRO":
         asunto = "Verifica tu cuenta de DataHorse"
         titulo = "Verifica tu correo"
         mensaje = (
-            "Usa este código para activar "
+            "Usa este cÃ³digo para activar "
             "tu cuenta de DataHorse."
         )
 
     else:
-        asunto = "Recuperación de contraseña - DataHorse"
-        titulo = "Recupera tu contraseña"
+        asunto = "RecuperaciÃ³n de contraseÃ±a - DataHorse"
+        titulo = "Recupera tu contraseÃ±a"
         mensaje = (
-            "Usa este código para establecer "
-            "una nueva contraseña."
+            "Usa este cÃ³digo para establecer "
+            "una nueva contraseÃ±a."
         )
 
     html = f"""
@@ -287,12 +287,12 @@ def _enviar_codigo(
         </div>
 
         <p>
-            Este código vence en
+            Este cÃ³digo vence en
             {CODIGO_EXPIRA_MINUTOS} minutos.
         </p>
 
         <p>
-            Si no solicitaste este código,
+            Si no solicitaste este cÃ³digo,
             ignora este mensaje.
         </p>
 
@@ -316,7 +316,7 @@ def _enviar_codigo(
                 "Subject": asunto,
                 "TextPart": (
                     f"Hola {nombre}. "
-                    f"Tu código DataHorse es {codigo}. "
+                    f"Tu cÃ³digo DataHorse es {codigo}. "
                     f"Vence en {CODIGO_EXPIRA_MINUTOS} minutos."
                 ),
                 "HTMLPart": html,
@@ -355,12 +355,12 @@ def _enviar_codigo(
 
         raise HTTPException(
             status_code=502,
-            detail="Mailjet rechazó el envío del correo",
+            detail="Mailjet rechazÃ³ el envÃ­o del correo",
         )
 
 
 # =========================================================
-# CÓDIGOS DE VERIFICACIÓN
+# CÃ“DIGOS DE VERIFICACIÃ“N
 # =========================================================
 
 def _crear_codigo_verificacion(
@@ -385,7 +385,7 @@ def _crear_codigo_verificacion(
 
     with engine.begin() as connection:
 
-        # Invalidar códigos anteriores del mismo tipo.
+        # Invalidar cÃ³digos anteriores del mismo tipo.
         connection.execute(
             text("""
                 UPDATE verificacion_correo
@@ -472,7 +472,7 @@ def _validar_codigo(
         if registro is None:
             raise HTTPException(
                 status_code=400,
-                detail="No existe un código válido",
+                detail="No existe un cÃ³digo vÃ¡lido",
             )
 
         if registro.fecha_expiracion < datetime.now():
@@ -490,7 +490,7 @@ def _validar_codigo(
 
             raise HTTPException(
                 status_code=400,
-                detail="El código ha expirado",
+                detail="El cÃ³digo ha expirado",
             )
 
         if registro.intentos >= MAX_INTENTOS_CODIGO:
@@ -508,7 +508,7 @@ def _validar_codigo(
 
             raise HTTPException(
                 status_code=429,
-                detail="Superaste el máximo de intentos",
+                detail="Superaste el mÃ¡ximo de intentos",
             )
 
         codigo_correcto = hmac.compare_digest(
@@ -540,7 +540,7 @@ def _validar_codigo(
 
             raise HTTPException(
                 status_code=400,
-                detail="Código incorrecto",
+                detail="CÃ³digo incorrecto",
             )
 
         connection.execute(
@@ -590,10 +590,10 @@ def register(
     except EmailAlreadyExistsError:
         raise HTTPException(
             status_code=409,
-            detail="Ese correo ya está registrado",
+            detail="Ese correo ya estÃ¡ registrado",
         )
 
-    # El usuario todavía no ha confirmado su correo.
+    # El usuario todavÃ­a no ha confirmado su correo.
     with engine.begin() as connection:
         connection.execute(
             text("""
@@ -635,7 +635,7 @@ def register(
             "Revisa tu correo para verificar tu cuenta"
             if correo_enviado
             else
-            "Cuenta creada. Usa reenviar código."
+            "Cuenta creada. Usa reenviar cÃ³digo."
         ),
     }
 
@@ -666,7 +666,7 @@ def verify_email(
 
     if usuario.estado.lower() == "activo":
         return {
-            "mensaje": "La cuenta ya está verificada"
+            "mensaje": "La cuenta ya estÃ¡ verificada"
         }
 
     _validar_codigo(
@@ -693,7 +693,7 @@ def verify_email(
 
 
 # =========================================================
-# REENVIAR CÓDIGO
+# REENVIAR CÃ“DIGO
 # =========================================================
 
 @router.post("/resend-code")
@@ -716,7 +716,7 @@ def resend_code(
 
     if usuario.estado.lower() == "activo":
         return {
-            "mensaje": "La cuenta ya está verificada"
+            "mensaje": "La cuenta ya estÃ¡ verificada"
         }
 
     _crear_codigo_verificacion(
@@ -727,7 +727,7 @@ def resend_code(
     )
 
     return {
-        "mensaje": "Código reenviado correctamente"
+        "mensaje": "CÃ³digo reenviado correctamente"
     }
 
 
@@ -756,7 +756,7 @@ def login(
     except InvalidCredentialsError:
         raise HTTPException(
             status_code=401,
-            detail="Correo o contraseña incorrectos",
+            detail="Correo o contraseÃ±a incorrectos",
         )
 
     usuario = repo.find_by_id(
@@ -772,7 +772,7 @@ def login(
     if usuario.estado.lower() != "activo":
         raise HTTPException(
             status_code=403,
-            detail="Debes verificar tu correo antes de iniciar sesión",
+            detail="Debes verificar tu correo antes de iniciar sesiÃ³n",
         )
 
     _crear_cookie(
@@ -799,7 +799,7 @@ def google_auth(
     if not GOOGLE_CLIENT_ID:
         raise HTTPException(
             status_code=500,
-            detail="GOOGLE_CLIENT_ID no está configurado",
+            detail="GOOGLE_CLIENT_ID no estÃ¡ configurado",
         )
 
     try:
@@ -813,7 +813,7 @@ def google_auth(
         print("ERROR GOOGLE:", repr(e))
         raise HTTPException(
             status_code=401,
-            detail="Token de Google inválido",
+            detail="Token de Google invÃ¡lido",
         )
 
     google_sub = datos.get("sub")
@@ -883,7 +883,7 @@ def google_auth(
             if otro_google and otro_google.google_sub != google_sub:
                 raise HTTPException(
                     status_code=409,
-                    detail="Esta cuenta ya está vinculada con otra cuenta de Google",
+                    detail="Esta cuenta ya estÃ¡ vinculada con otra cuenta de Google",
                 )
 
             if not otro_google:
@@ -904,7 +904,7 @@ def google_auth(
                     },
                 )
 
-    # Google ya verificó el correo.
+    # Google ya verificÃ³ el correo.
     with engine.begin() as connection:
         connection.execute(
             text("""
@@ -915,7 +915,7 @@ def google_auth(
             {"id_usuario": usuario.id_usuario},
         )
 
-    # 👇 AQUÍ ESTÁ EL DEBUG CORREGIDO 👇
+    # ðŸ‘‡ AQUÃ ESTÃ EL DEBUG CORREGIDO ðŸ‘‡
     try:
         _crear_cookie(
             response,
@@ -923,7 +923,7 @@ def google_auth(
         )
 
         return {
-            "mensaje": "Autenticación con Google exitosa",
+            "mensaje": "AutenticaciÃ³n con Google exitosa",
             "usuario": {
                 "id": usuario.id_usuario,
                 "nombre": usuario.nombre,
@@ -932,13 +932,13 @@ def google_auth(
         }
     except Exception as e:
         import traceback
-        traceback.print_exc() # Esto imprimirá el error real en la terminal
+        traceback.print_exc() # Esto imprimirÃ¡ el error real en la terminal
         raise HTTPException(status_code=500, detail=str(e))
 
 
 # =========================================================
-# OLVIDÉ MI CONTRASEÑA
-# También sirve para una cuenta creada con Google.
+# OLVIDÃ‰ MI CONTRASEÃ‘A
+# TambiÃ©n sirve para una cuenta creada con Google.
 # =========================================================
 
 @router.post("/forgot-password")
@@ -947,25 +947,18 @@ def forgot_password(
     repo: UsuarioRepositoryPort = Depends(get_usuario_repo),
 ):
     usuario = repo.find_by_email(body.correo.strip().lower())
-    
-    respuesta = {
+
+    if usuario is not None:
+        _crear_codigo_verificacion(
+            usuario.id_usuario,
+            usuario.correo,
+            usuario.nombre,
+            "RECUPERAR_PASSWORD",
+        )
+
+    return {
         "mensaje": "Si el correo está registrado, recibirás un código."
     }
-
-    if usuario is None:
-        return respuesta
-
-    _crear_codigo_verificacion(
-        usuario.id_usuario,
-        usuario.correo,
-        usuario.nombre,
-        "RECUPERAR_PASSWORD",
-    )
-
-    return respuesta
-# =========================================================
-# RESTABLECER / CREAR CONTRASEÑA
-# =========================================================
 
 @router.post("/reset-password")
 def reset_password(
@@ -982,7 +975,7 @@ def reset_password(
     if usuario is None:
         raise HTTPException(
             status_code=400,
-            detail="Correo o código inválido",
+            detail="Correo o cÃ³digo invÃ¡lido",
         )
 
     _validar_password(
@@ -1007,7 +1000,7 @@ def reset_password(
                 UPDATE usuario
 
                 SET
-                    `contraseña` = :contrasena,
+                    `contraseÃ±a` = :contrasena,
                     estado = 'activo'
 
                 WHERE id_usuario = :id_usuario
@@ -1019,7 +1012,7 @@ def reset_password(
         )
 
     return {
-        "mensaje": "Contraseña actualizada correctamente"
+        "mensaje": "ContraseÃ±a actualizada correctamente"
     }
 
 
@@ -1079,5 +1072,5 @@ def logout(
     )
 
     return {
-        "mensaje": "Sesión cerrada correctamente"
+        "mensaje": "SesiÃ³n cerrada correctamente"
     }

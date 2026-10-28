@@ -31,3 +31,15 @@ htmlcov/
 
 # Archivos subidos localmente (para no duplicar peso, usaremos el volumen)
 uploads/
+# Resultados y caché de análisis de SonarQube
+.scannerwork/
+.sonar/
+
+# Claves privadas y certificados locales
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Archivos de secretos locales
+secrets/

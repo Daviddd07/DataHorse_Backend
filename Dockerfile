@@ -1,29 +1,41 @@
-# Usamos Python 3.12 (según tu captura)
+
+# Imagen base de Python
 FROM python:3.12-slim
 
-# Evita que Python genere archivos .pyc y permite ver los logs en tiempo real
+# Evitar archivos .pyc y mostrar logs en tiempo real
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Directorio de trabajo
 WORKDIR /app
 
-# Instalamos dependencias del sistema necesarias (por si usas mysqlclient o similares)
-RUN apt-get update && apt-get install -y \
+# Dependencias del sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     default-libmysqlclient-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiamos e instalamos dependencias de Python
+# Instalar dependencias de Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiamos todo el código del backend
-COPY . .
+# Copiar el código de la aplicación
+# Copiar el archivo principal de FastAPI
+COPY main.py .
 
-# Exponemos el puerto
+# Copiar los módulos de la aplicación
+COPY app/ ./app/
+
+# Crear usuario sin privilegios
+RUN useradd --create-home --shell /usr/sbin/nologin appuser \
+    && chown -R appuser:appuser /app
+
+# Ejecutar la aplicación como usuario no root
+USER appuser
+
+# Puerto de FastAPI
 EXPOSE 8000
 
-# Comando de arranque
+# Arranque del backend
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
