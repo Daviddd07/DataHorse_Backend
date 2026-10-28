@@ -1,8 +1,33 @@
-﻿venv/
+﻿# Entornos virtuales (¡Crucial para no romper Docker!)
+venv/
+env/
 .venv/
+
+# Archivos de Python compilados
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+
+# Variables de entorno y secretos
 .env
 .env.*
-.git/
+
+# Archivos de Git y VS Code
+.git
+.gitignore
+.vscode/
+.idea/
+
+# Base de datos local y logs
+*.sqlite3
+*.db
+*.log
+
+# Pruebas y caché
 .pytest_cache/
+.coverage
+htmlcov/
+
+# Archivos subidos localmente (para no duplicar peso, usaremos el volumen)
+uploads/

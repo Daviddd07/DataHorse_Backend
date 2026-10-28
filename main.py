@@ -200,8 +200,7 @@ app.mount(
 # ======================================================
 
 origenes_permitidos = os.getenv(
-    "ALLOWED_ORIGINS", 
-    "http://localhost:4200,http://127.0.0.1:4200"
+    "ALLOWED_ORIGINS"
 ).split(",")
 
 app.add_middleware(
