@@ -15,3 +15,10 @@ frontend/.angular/
 Thumbs.db
 .env
 backups/
+
+# Archivos temporales de SonarQube
+.scannerwork/
+report-task.txt
+
+# Copias de seguridad locales
+*.bak
