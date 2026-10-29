@@ -1,3 +1,8 @@
+import logging
+import os
+import time
+from uuid import uuid4
+
 from fastapi import (
     FastAPI,
     HTTPException,
@@ -31,11 +36,24 @@ from app.infraestructure.adaptadores.outbound.persistence.db_conexion import (
     engine,
 )
 
+from app.infraestructure.adaptadores.outbound.persistence.technical_log_service import (
+    guardar_log_tecnico,
+)
+
 from app.config.settings import (
     UPLOAD_DIR,
 )
 
-import os
+from app.config.logging_config import configurar_logging
+
+
+# ======================================================
+# LOGGING TÉCNICO
+# ======================================================
+
+configurar_logging()
+
+logger = logging.getLogger("datahorse")
 
 
 # ======================================================
@@ -49,6 +67,81 @@ app = FastAPI(
 
 
 # ======================================================
+# LOGGING DE SOLICITUDES HTTP
+# ======================================================
+
+@app.middleware("http")
+async def registrar_solicitud_http(
+    request: Request,
+    call_next,
+):
+    request_id = str(uuid4())
+    inicio = time.perf_counter()
+
+    try:
+        response = await call_next(request)
+
+        duracion_ms = round(
+            (time.perf_counter() - inicio) * 1000,
+            2,
+        )
+
+        response.headers["X-Request-ID"] = request_id
+
+        mensaje = (
+            f"Solicitud HTTP | request_id={request_id} | "
+            f"método={request.method} | "
+            f"ruta={request.url.path} | "
+            f"estado={response.status_code} | "
+            f"duración_ms={duracion_ms}"
+        )
+
+        logger.info("%s", mensaje)
+
+        guardar_log_tecnico(
+            nivel="INFO",
+            modulo="http",
+            mensaje=mensaje,
+            request_id=request_id,
+            metodo_http=request.method,
+            ruta=request.url.path,
+            estado_http=response.status_code,
+            duracion_ms=duracion_ms,
+        )
+
+        return response
+
+    except Exception:
+        duracion_ms = round(
+            (time.perf_counter() - inicio) * 1000,
+            2,
+        )
+
+        mensaje = (
+            f"Error durante solicitud HTTP | "
+            f"request_id={request_id} | "
+            f"método={request.method} | "
+            f"ruta={request.url.path} | "
+            f"duración_ms={duracion_ms}"
+        )
+
+        logger.exception("%s", mensaje)
+
+        guardar_log_tecnico(
+            nivel="ERROR",
+            modulo="http",
+            mensaje=mensaje,
+            request_id=request_id,
+            metodo_http=request.method,
+            ruta=request.url.path,
+            duracion_ms=duracion_ms,
+            excepcion="Error durante el procesamiento de la solicitud HTTP",
+        )
+
+        raise
+
+
+# ======================================================
 # RESPUESTAS EXITOSAS ESTANDARIZADAS
 # ======================================================
 
@@ -57,7 +150,6 @@ def success_response(
     message="Operación realizada correctamente",
     status_code=200,
 ):
-
     return JSONResponse(
         status_code=status_code,
         content={
@@ -98,7 +190,6 @@ async def http_exception_handler(
     request: Request,
     exc: HTTPException,
 ):
-
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -124,7 +215,6 @@ async def validation_exception_handler(
     request: Request,
     exc: RequestValidationError,
 ):
-
     errores = exc.errors()
 
     mensaje = (
@@ -158,10 +248,10 @@ async def general_exception_handler(
     request: Request,
     exc: Exception,
 ):
-
-    print(
-        "ERROR NO CONTROLADO:",
-        repr(exc),
+    logger.exception(
+        "Error interno no controlado | método=%s | ruta=%s",
+        request.method,
+        request.url.path,
     )
 
     return JSONResponse(
@@ -200,8 +290,15 @@ app.mount(
 # ======================================================
 
 origenes_permitidos = os.getenv(
-    "ALLOWED_ORIGINS"
+    "ALLOWED_ORIGINS",
+    "",
 ).split(",")
+
+origenes_permitidos = [
+    origen.strip()
+    for origen in origenes_permitidos
+    if origen.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -256,7 +353,6 @@ app.include_router(
 
 @app.get("/")
 def root():
-
     return success_response(
         message="DataHorse API funcionando correctamente",
         data={
@@ -272,7 +368,6 @@ def root():
 
 @app.get("/api/v1/ping")
 def ping():
-
     return success_response(
         message="Conexión exitosa con FastAPI",
         data={
@@ -287,11 +382,8 @@ def ping():
 
 @app.get("/api/v1/test-db")
 def test_database():
-
     try:
-
         with engine.connect() as connection:
-
             connection.execute(
                 text("SELECT 1")
             )
@@ -305,6 +397,9 @@ def test_database():
         )
 
     except Exception:
+        logger.exception(
+            "Falló la comprobación de conexión con MySQL"
+        )
 
         raise HTTPException(
             status_code=500,

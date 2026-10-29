@@ -1,6 +1,5 @@
-﻿from datetime import date
-
-from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, Text
+﻿from datetime import date, datetime
+from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import Base
@@ -87,4 +86,53 @@ class FotoCaballoModel(Base):
     es_principal: Mapped[bool] = mapped_column(default=False, nullable=False)
     orden: Mapped[int] = mapped_column(default=0, nullable=False)
     fecha_subida: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+class AuditLogModel(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(
+        BigInteger,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    usuario_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "usuario.id_usuario",
+            ondelete="SET NULL",
+            onupdate="CASCADE",
+        ),
+        nullable=True,
+    )
+
+    accion: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    modulo: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    resultado: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+    )
+
+    detalle: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    request_id: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    fecha_hora: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.current_timestamp(),
+    )
 

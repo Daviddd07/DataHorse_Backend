@@ -1,4 +1,4 @@
-from datetime import date
+﻿from datetime import date
 from typing import List
 
 from fastapi import (
@@ -61,6 +61,10 @@ from app.infraestructure.adaptadores.inbound.rest.foto_schemas import (
 
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import (
     engine,
+)
+
+from app.infraestructure.adaptadores.outbound.persistence.audit_log_service import (
+    registrar_auditoria,
 )
 
 from app.infraestructure.adaptadores.outbound.security.jwt_handler import (
@@ -836,6 +840,14 @@ def agregar_favorito(id_caballo: int, request: Request):
                 },
             )
 
+        registrar_auditoria(
+            accion="AGREGAR_FAVORITO",
+            modulo="FAVORITOS",
+            resultado="EXITOSO",
+            usuario_id=id_usuario,
+            detalle=f"Se agregó el caballo {id_caballo} a favoritos.",
+        )
+
         return {
             "mensaje": "Agregado a favoritos",
             "id_favorito": id_favorito,
@@ -861,7 +873,7 @@ def quitar_favorito(id_caballo: int, request: Request):
 
     try:
         with engine.begin() as connection:
-            connection.execute(
+            resultado_delete = connection.execute(
                 text("""
                     DELETE FROM favorito
                     WHERE
@@ -874,6 +886,18 @@ def quitar_favorito(id_caballo: int, request: Request):
                     "id_caballo": id_caballo,
                 },
             )
+            filas_eliminadas = resultado_delete.rowcount
+
+        if filas_eliminadas == 0:
+            return {"mensaje": "El caballo no estaba en favoritos"}
+
+        registrar_auditoria(
+            accion="QUITAR_FAVORITO",
+            modulo="FAVORITOS",
+            resultado="EXITOSO",
+            usuario_id=id_usuario,
+            detalle=f"Se quitó el caballo {id_caballo} de favoritos.",
+        )
 
         return {"mensaje": "Eliminado de favoritos"}
 
@@ -894,9 +918,28 @@ def quitar_favorito(id_caballo: int, request: Request):
 )
 async def subir_fotos(
     id_caballo: int,
+    request: Request,
     files: List[UploadFile] = File(...),
     service: SubirFotosService = Depends(get_subir_fotos_service),
 ):
+
+    id_usuario = _obtener_id_usuario_autenticado(request)
+
+    with engine.connect() as connection:
+        caballo = connection.execute(
+            text('''
+                SELECT id_caballo
+                FROM caballo
+                WHERE id_caballo = :id_caballo
+                  AND usuario_id_usuario = :id_usuario
+                  AND disponibilidad != 'Eliminado'
+            '''),
+            {"id_caballo": id_caballo, "id_usuario": id_usuario},
+        ).first()
+
+    if caballo is None:
+        raise HTTPException(status_code=404, detail="Caballo no encontrado")
+
     archivos = []
     for f in files:
         contenido = await f.read()
@@ -905,7 +948,22 @@ async def subir_fotos(
     try:
         fotos = service.ejecutar(id_caballo, archivos)
     except ValueError as e:
+        registrar_auditoria(
+            accion="SUBIR_FOTOGRAFIAS",
+            modulo="FOTOGRAFIAS",
+            resultado="FALLIDO",
+            usuario_id=id_usuario,
+            detalle=f"No se pudieron subir fotografías del caballo {id_caballo}: {str(e)}",
+        )
         raise HTTPException(status_code=400, detail=str(e))
+
+    registrar_auditoria(
+        accion="SUBIR_FOTOGRAFIAS",
+        modulo="FOTOGRAFIAS",
+        resultado="EXITOSO",
+        usuario_id=id_usuario,
+        detalle=f"Se subieron {len(fotos)} fotografías al caballo {id_caballo}.",
+    )
 
     return [
         FotoCaballoResponse(
@@ -1590,9 +1648,28 @@ def eliminar_foto(
         try:
             service.eliminar_archivo(foto.ruta)
         except Exception as e:
-            print(f"No se pudo borrar archivo fisico: {e}")
+            registrar_auditoria(
+                accion="ELIMINAR_FOTOGRAFIA",
+                modulo="FOTOGRAFIAS",
+                resultado="FALLIDO",
+                usuario_id=id_usuario,
+                detalle=f"El registro de la fotografía {id_foto} fue eliminado de la base de datos, pero falló el borrado del archivo físico del caballo {id_caballo}: {e}",
+            )
+            raise HTTPException(
+                status_code=500,
+                detail="La fotografía fue retirada de la base de datos, pero no se pudo eliminar su archivo físico.",
+            )
 
         service.promover_principal(id_caballo)
+
+        registrar_auditoria(
+            accion="ELIMINAR_FOTOGRAFIA",
+            modulo="FOTOGRAFIAS",
+            resultado="EXITOSO",
+            usuario_id=id_usuario,
+            detalle=f"Se eliminó la fotografía {id_foto} del caballo {id_caballo}.",
+        )
+
 
         return {
             "mensaje": "Foto eliminada correctamente",

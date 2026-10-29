@@ -1,4 +1,4 @@
-﻿import hashlib
+import hashlib
 import hmac
 import os
 import secrets
@@ -735,6 +735,10 @@ def resend_code(
 # LOGIN NORMAL
 # =========================================================
 
+from app.infraestructure.adaptadores.outbound.persistence.audit_log_service import (
+    registrar_auditoria,
+)
+
 @router.post("/login")
 def login(
     body: LoginRequest,
@@ -746,7 +750,6 @@ def login(
         get_usuario_repo
     ),
 ):
-
     try:
         usuario_id = use_case.execute(
             body.correo,
@@ -754,25 +757,45 @@ def login(
         )
 
     except InvalidCredentialsError:
-        raise HTTPException(
-            status_code=401,
-            detail="Correo o contraseÃ±a incorrectos",
+        registrar_auditoria(
+            accion="LOGIN",
+            modulo="AUTENTICACION",
+            resultado="FALLIDO",
+            detalle="Credenciales incorrectas",
         )
 
-    usuario = repo.find_by_id(
-        int(usuario_id)
-    )
+        raise HTTPException(
+            status_code=401,
+            detail="Correo o contraseña incorrectos",
+        )
+
+    usuario = repo.find_by_id(int(usuario_id))
 
     if usuario is None:
+        registrar_auditoria(
+            accion="LOGIN",
+            modulo="AUTENTICACION",
+            resultado="FALLIDO",
+            detalle="Usuario no encontrado",
+        )
+
         raise HTTPException(
             status_code=401,
             detail="Usuario no encontrado",
         )
 
     if usuario.estado.lower() != "activo":
+        registrar_auditoria(
+            accion="LOGIN",
+            modulo="AUTENTICACION",
+            resultado="DENEGADO",
+            usuario_id=usuario.id_usuario,
+            detalle="Usuario sin acceso por estado inactivo",
+        )
+
         raise HTTPException(
             status_code=403,
-            detail="Debes verificar tu correo antes de iniciar sesiÃ³n",
+            detail="Debes verificar tu correo antes de iniciar sesión",
         )
 
     _crear_cookie(
@@ -780,11 +803,17 @@ def login(
         usuario.id_usuario,
     )
 
+    registrar_auditoria(
+        accion="LOGIN",
+        modulo="AUTENTICACION",
+        resultado="EXITOSO",
+        usuario_id=usuario.id_usuario,
+        detalle="Inicio de sesión correcto",
+    )
+
     return {
         "mensaje": "Login exitoso"
     }
-
-
 # =========================================================
 # GOOGLE SIGN-IN
 # =========================================================
