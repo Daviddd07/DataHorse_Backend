@@ -1,10 +1,9 @@
+from app.domain.exceptions import InvalidCredentialsError
 from app.domain.ports.in_.login_port import LoginPort
 from app.domain.ports.out.password_hasher_port import PasswordHasherPort
 from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
 
-
-class InvalidCredentialsError(Exception):
-    """Correo o contraseña incorrectos."""
+__all__ = ["InvalidCredentialsError", "LoginUseCase"]
 
 
 class LoginUseCase(LoginPort):
@@ -17,6 +16,6 @@ class LoginUseCase(LoginPort):
 
         # Mismo error exista o no el correo, para no filtrar qué correos están registrados.
         if usuario is None or not self.hasher.verificar(password, usuario.contrasena):
-            raise InvalidCredentialsError("Correo o contraseña incorrectos")
+            raise InvalidCredentialsError()
 
         return str(usuario.id_usuario)

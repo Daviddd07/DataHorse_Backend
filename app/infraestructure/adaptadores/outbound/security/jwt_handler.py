@@ -10,6 +10,8 @@ import jwt
 
 from dotenv import load_dotenv
 
+from app.domain.ports.out.token_port import TokenPort
+
 
 # ======================================================
 # VARIABLES DE ENTORNO
@@ -108,11 +110,14 @@ def decode_access_token(
         )
 
 
-    except jwt.PyJWTError as e:
-
-        print(
-            "ERROR JWT:",
-            repr(e),
-        )
+    except jwt.PyJWTError:
 
         return None
+
+
+class JwtTokenService(TokenPort):
+    def crear(self, id_usuario: int) -> str:
+        return create_access_token(id_usuario)
+
+    def decodificar(self, token: str) -> str | None:
+        return decode_access_token(token)

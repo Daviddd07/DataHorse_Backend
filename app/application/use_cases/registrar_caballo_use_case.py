@@ -1,99 +1,91 @@
 from datetime import date
 
 from app.domain.entities.Caballo import Caballo
-from app.domain.entities.Publicaciones import Publicacion
-from app.domain.entities.Raza import Raza
-from app.domain.exceptions import DatosInvalidosError
+from app.domain.exceptions import DatosInvalidosError, RecursoNoEncontradoError
 from app.domain.ports.in_.registrar_caballo_port import RegistrarCaballoComando, RegistrarCaballoPort
-from app.domain.ports.out.caballo_repository_port import CaballoRepositoryPort
-from app.domain.ports.out.publicacion_repository_port import PublicacionRepositoryPort
+from app.domain.ports.out.caballo_repository_port import (
+    CaballoRegistrado,
+    CaballoRepositoryPort,
+    NuevaPublicacion,
+)
+from app.domain.ports.out.geocoding_port import GeocodingPort
 from app.domain.ports.out.raza_repository_port import RazaRepositoryPort
+from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
 
-SEXOS_VALIDOS = {"Macho", "Hembra"}
-DISPONIBILIDAD_VALIDA = {"Disponible", "No disponible"}
-NOMBRE_RAZA_OTRO = "Otro"
+SEXOS_VALIDOS = ("Macho", "Hembra")
 
 
 class RegistrarCaballoUseCase(RegistrarCaballoPort):
+    """Registra un caballo. Los machos además se publican en el marketplace."""
+
     def __init__(
         self,
         caballo_repo: CaballoRepositoryPort,
         raza_repo: RazaRepositoryPort,
-        publicacion_repo: PublicacionRepositoryPort,
+        usuario_repo: UsuarioRepositoryPort,
+        geocoding: GeocodingPort,
     ):
         self._caballo_repo = caballo_repo
         self._raza_repo = raza_repo
-        self._publicacion_repo = publicacion_repo
+        self._usuario_repo = usuario_repo
+        self._geocoding = geocoding
 
-    def ejecutar(self, c: RegistrarCaballoComando) -> Caballo:
+    def ejecutar(self, c: RegistrarCaballoComando) -> CaballoRegistrado:
         nombre = c.nombre.strip()
-        color = c.color.strip()
-        ubicacion = c.ubicacion.strip()
-        descripcion = c.descripcion.strip()
-        raza_personalizada = (c.raza_personalizada or "").strip()
+        raza_nueva = (c.raza_personalizada or "").strip() or None
 
+        if c.sexo not in SEXOS_VALIDOS:
+            raise DatosInvalidosError("sexo", "El sexo debe ser Macho o Hembra")
         if not nombre:
             raise DatosInvalidosError("nombre", "El nombre es obligatorio")
-        if c.sexo not in SEXOS_VALIDOS:
-            raise DatosInvalidosError("sexo", "Debe ser 'Macho' o 'Hembra'")
-        if c.disponibilidad not in DISPONIBILIDAD_VALIDA:
-            raise DatosInvalidosError("disponibilidad", "Debe ser 'Disponible' o 'No disponible'")
-        if c.altura is None or c.altura <= 0:
-            raise DatosInvalidosError("altura", "La altura debe ser mayor a 0")
-        if not color or not ubicacion or not descripcion:
-            raise DatosInvalidosError("datos", "Color, ubicación y descripción son obligatorios")
-        if c.fecha_nacimiento is None:
-            raise DatosInvalidosError("fecha_nacimiento", "La fecha de nacimiento es obligatoria (puede ser aproximada)")
+        if c.altura <= 0:
+            raise DatosInvalidosError("altura", "La altura debe ser mayor que cero")
 
-        if c.id_raza is None and not raza_personalizada:
-            raise DatosInvalidosError("raza", "Selecciona una raza o escribe una en 'Otro'")
-        if c.id_raza is not None and raza_personalizada:
-            raise DatosInvalidosError("raza", "Elige una raza existente o escribe una en 'Otro', no ambas")
+        es_macho = c.sexo == "Macho"
+        precio = c.precio if es_macho else None
 
-        # Un caballo (Macho) se publica en el marketplace; una yegua solo se guarda.
-        if c.sexo == "Macho":
-            if c.precio is None or c.precio <= 0:
-                raise DatosInvalidosError("precio", "El precio debe ser mayor a 0")
+        if es_macho and (precio is None or precio <= 0):
+            raise DatosInvalidosError("precio", "Debes ingresar un precio para el caballo")
 
-        if raza_personalizada:
-            # Cada "Otro" queda como su propia fila en Raza (nombre='Otro',
-            # descripcion=texto libre del usuario), así no se pisan entre caballos.
-            nueva_raza = self._raza_repo.create(
-                Raza(id_raza=None, nombre=NOMBRE_RAZA_OTRO, descripcion=raza_personalizada)
-            )
-            id_raza = nueva_raza.id_raza
-        else:
-            raza_existente = self._raza_repo.find_by_id(c.id_raza)
-            if raza_existente is None:
-                raise DatosInvalidosError("raza", "La raza seleccionada no existe")
-            id_raza = raza_existente.id_raza
+        if self._usuario_repo.find_by_id(c.id_propietario) is None:
+            raise RecursoNoEncontradoError("Usuario no encontrado")
+
+        if raza_nueva is None:
+            if c.id_raza is None:
+                raise DatosInvalidosError("raza", "Debes seleccionar una raza")
+            if self._raza_repo.find_by_id(c.id_raza) is None:
+                raise RecursoNoEncontradoError("La raza seleccionada no existe")
+
+        geo = self._geocoding.geocodificar(c.ubicacion)
 
         caballo = Caballo(
             id_caballo=None,
-            id_raza=id_raza,
+            id_raza=None if raza_nueva else c.id_raza,
             id_propietario=c.id_propietario,
             nombre=nombre,
             sexo=c.sexo,
             fecha_nacimiento=c.fecha_nacimiento,
             altura=c.altura,
-            color=color,
-            ubicacion=ubicacion,
-            descripcion=descripcion,
+            color=c.color.strip(),
+            ubicacion=c.ubicacion.strip(),
+            descripcion=c.descripcion.strip(),
             disponibilidad=c.disponibilidad,
+            ubicacion_lat=geo.lat if geo else None,
+            ubicacion_lng=geo.lng if geo else None,
+            ubicacion_texto=geo.texto if geo else c.ubicacion.strip(),
+            ciudad=geo.ciudad if geo else None,
+            departamento=geo.departamento if geo else None,
         )
-        caballo_creado = self._caballo_repo.create(caballo)
 
-        if c.sexo == "Macho":
-            publicacion = Publicacion(
-                id_publicacion=None,
-                id_caballo=caballo_creado.id_caballo,
-                id_usuario=c.id_propietario,
-                titulo=nombre,
-                descripcion=descripcion,
-                precio_referencia=c.precio,
-                estado="Activa",
+        publicacion = (
+            NuevaPublicacion(
+                titulo=f"{nombre} - {c.sexo}",
+                descripcion=caballo.descripcion,
+                precio_referencia=precio,
                 fecha_publicacion=date.today(),
             )
-            self._publicacion_repo.create(publicacion)
+            if es_macho
+            else None
+        )
 
-        return caballo_creado
+        return self._caballo_repo.registrar(caballo, raza_nueva, publicacion)

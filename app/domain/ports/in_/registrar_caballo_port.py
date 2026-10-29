@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Optional
 
-from app.domain.entities.Caballo import Caballo
+from app.domain.ports.out.caballo_repository_port import CaballoRegistrado
 
 
 @dataclass
@@ -19,11 +19,10 @@ class RegistrarCaballoComando:
     disponibilidad: str
     id_raza: Optional[int] = None
     raza_personalizada: Optional[str] = None  # cuando el usuario eligió "Otro"
-    # Solo aplican cuando sexo == "Macho": el caballo también se publica en el marketplace.
-    titulo: Optional[str] = None
+    # Solo aplica cuando sexo == "Macho": el caballo también se publica en el marketplace.
     precio: Optional[float] = None
 
 
 class RegistrarCaballoPort(ABC):
     @abstractmethod
-    def ejecutar(self, c: RegistrarCaballoComando) -> Caballo: ...
+    def ejecutar(self, c: RegistrarCaballoComando) -> CaballoRegistrado: ...

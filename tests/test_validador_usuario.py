@@ -2,7 +2,7 @@
 import pytest
 
 from app.domain.services.validador_usuario import validar_registro
-from app.domain.exceptions import EmailAlreadyExistsError
+from app.domain.exceptions import DatosInvalidosError
 
 
 def test_registro_valido():
@@ -31,7 +31,7 @@ def test_registro_valido_sin_telefono_ni_ubicacion():
 
 @pytest.mark.parametrize("nombre", ["A", ""])
 def test_nombre_demasiado_corto(nombre):
-    with pytest.raises(EmailAlreadyExistsError):
+    with pytest.raises(DatosInvalidosError):
         validar_registro(
             nombre=nombre,
             correo="maria@example.com",
@@ -42,7 +42,7 @@ def test_nombre_demasiado_corto(nombre):
 
 
 def test_correo_invalido():
-    with pytest.raises(EmailAlreadyExistsError):
+    with pytest.raises(DatosInvalidosError):
         validar_registro(
             nombre="María",
             correo="correo-invalido",
@@ -62,7 +62,7 @@ def test_correo_invalido():
     ],
 )
 def test_contrasena_invalida(contrasena):
-    with pytest.raises(EmailAlreadyExistsError):
+    with pytest.raises(DatosInvalidosError):
         validar_registro(
             nombre="María",
             correo="maria@example.com",
@@ -73,7 +73,7 @@ def test_contrasena_invalida(contrasena):
 
 
 def test_telefono_invalido():
-    with pytest.raises(EmailAlreadyExistsError):
+    with pytest.raises(DatosInvalidosError):
         validar_registro(
             nombre="María",
             correo="maria@example.com",
@@ -84,7 +84,7 @@ def test_telefono_invalido():
 
 
 def test_ubicacion_demasiado_larga():
-    with pytest.raises(EmailAlreadyExistsError):
+    with pytest.raises(DatosInvalidosError):
         validar_registro(
             nombre="María",
             correo="maria@example.com",

@@ -1,11 +1,11 @@
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.domain.entities.Usuario import Usuario
+from app.domain.exceptions import EmailAlreadyExistsError
 from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
-from app.application.use_cases.registrar_use_case import EmailAlreadyExistsError
 
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import (
     SessionLocal,
@@ -87,6 +87,22 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
             db.refresh(usuario_db)
 
             return self._to_domain(usuario_db)
+
+    def actualizar_estado(self, id_usuario: int, estado: str) -> None:
+        self._actualizar(id_usuario, estado=estado)
+
+    def actualizar_contrasena(self, id_usuario: int, contrasena_hash: str) -> None:
+        self._actualizar(id_usuario, contrasena=contrasena_hash)
+
+    @staticmethod
+    def _actualizar(id_usuario: int, **valores) -> None:
+        with SessionLocal() as db:
+            db.execute(
+                update(UsuarioModel)
+                .where(UsuarioModel.id_usuario == id_usuario)
+                .values(**valores)
+            )
+            db.commit()
 
     @staticmethod
     def _to_domain(usuario_db: UsuarioModel) -> Usuario:

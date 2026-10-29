@@ -2,6 +2,7 @@
 
 from sqlalchemy import text
 
+from app.domain.ports.out.auditoria_port import AuditoriaPort
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import (
     engine,
 )
@@ -51,4 +52,22 @@ def registrar_auditoria(
     except Exception:
         logger.exception(
             "No fue posible guardar el evento de auditoría."
+        )
+
+
+class AuditoriaMySQL(AuditoriaPort):
+    def registrar(
+        self,
+        accion: str,
+        modulo: str,
+        resultado: str,
+        usuario_id: int | None = None,
+        detalle: str | None = None,
+    ) -> None:
+        registrar_auditoria(
+            accion=accion,
+            modulo=modulo,
+            resultado=resultado,
+            usuario_id=usuario_id,
+            detalle=detalle,
         )

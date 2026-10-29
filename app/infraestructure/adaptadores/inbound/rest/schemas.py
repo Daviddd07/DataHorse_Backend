@@ -1,8 +1,10 @@
 from datetime import date
-from typing import Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field
 
+# ======================================================
+# AUTENTICACIÓN
+# ======================================================
 
 class LoginRequest(BaseModel):
     correo: EmailStr
@@ -16,49 +18,40 @@ class RegistrarRequest(BaseModel):
     telefono: str | None = None
     ubicacion: str | None = None
 
+
 class UsuarioResponse(BaseModel):
     id: int
     correo: str
     nombre: str
 
 
-class RazaResponse(BaseModel):
-    id_raza: int
-    nombre: str
-    descripcion: Optional[str] = None
+class GoogleAuthRequest(BaseModel):
+    credential: str
 
 
-class CaballoRequest(BaseModel):
-    nombre: str
-    sexo: Literal["Macho", "Hembra"]
-    fecha_nacimiento: date
-    altura: float
-    color: str
-    ubicacion: str
-    descripcion: str
-    disponibilidad: Literal["Disponible", "No disponible"]
-    # Exactamente uno de los dos: una raza existente o una escrita a mano ("Otro")
-    id_raza: Optional[int] = None
-    raza_personalizada: Optional[str] = None
-    # Solo obligatorios cuando sexo == "Macho" (se publica en el marketplace).
-    # La validación real de "obligatorio si es Macho" vive en el caso de uso.
-    titulo: Optional[str] = None
-    precio: Optional[float] = None
-    foto_principal: str | None = None
-
-    @model_validator(mode="after")
-    def validar_raza(self):
-        if not self.id_raza and not self.raza_personalizada:
-            raise ValueError("Debes elegir una raza o escribir una en 'Otro'")
-        if self.id_raza and self.raza_personalizada:
-            raise ValueError("Elige una raza existente o escribe una en 'Otro', no ambas")
-        return self
+class CorreoRequest(BaseModel):
+    correo: EmailStr
 
 
-class CaballoResponse(BaseModel):
-    id_caballo: int
-    id_raza: int
-    id_propietario: int
+class VerificarCodigoRequest(BaseModel):
+    correo: EmailStr
+    codigo: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class ResetPasswordRequest(BaseModel):
+    correo: EmailStr
+    codigo: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+    nueva_password: str = Field(min_length=8, max_length=64)
+
+
+# ======================================================
+# CABALLOS
+# ======================================================
+
+class CaballoCreateRequest(BaseModel):
+    id_raza: int | None = None
+    raza_personalizada: str | None = None
+
     nombre: str
     sexo: str
     fecha_nacimiento: date
@@ -68,31 +61,19 @@ class CaballoResponse(BaseModel):
     descripcion: str
     disponibilidad: str
 
+    precio: float | None = None
 
-class PublicacionListItem(BaseModel):
-    id_publicacion: int
-    id_caballo: int
-    titulo: str
+
+class CaballoUpdateRequest(BaseModel):
+    id_raza: int | None = None
+    raza_personalizada: str | None = None
+
     nombre: str
-    raza: str
-    sexo: str
+    fecha_nacimiento: date
+    altura: float
     color: str
     ubicacion: str
-    precio_referencia: float
-    estado: str
-    fecha_publicacion: date
-    
-class PublicacionListItem(BaseModel):
-    id_publicacion: int
-    id_caballo: int
-    titulo: str
-    nombre: str
-    raza: str
-    sexo: str
-    color: str
-    ubicacion: str
-    precio_referencia: float
-    estado: str
-    fecha_publicacion: date
-    foto_principal: Optional[str] = None
-    
+    descripcion: str
+    disponibilidad: str
+
+    precio: float | None = None

@@ -27,9 +27,19 @@ from fastapi.staticfiles import (
 
 from sqlalchemy import text
 
+from app.domain.exceptions import DominioError
+
 from app.infraestructure.adaptadores.inbound.rest import (
-    controller,
     auth_controller,
+    caballo_controller,
+    favorito_controller,
+    foto_controller,
+    publicacion_controller,
+    raza_controller,
+)
+
+from app.infraestructure.adaptadores.inbound.rest.errores import (
+    estado_http,
 )
 
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import (
@@ -181,6 +191,27 @@ TITULOS_HTTP = {
 }
 
 
+def problem_response(
+    request: Request,
+    status_code: int,
+    detail: str,
+):
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "type": "about:blank",
+            "title": TITULOS_HTTP.get(
+                status_code,
+                "Error",
+            ),
+            "status": status_code,
+            "detail": detail,
+            "instance": request.url.path,
+        },
+        media_type="application/problem+json",
+    )
+
+
 # ======================================================
 # HTTP EXCEPTION
 # ======================================================
@@ -190,19 +221,26 @@ async def http_exception_handler(
     request: Request,
     exc: HTTPException,
 ):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "type": "about:blank",
-            "title": TITULOS_HTTP.get(
-                exc.status_code,
-                "Error",
-            ),
-            "status": exc.status_code,
-            "detail": str(exc.detail),
-            "instance": request.url.path,
-        },
-        media_type="application/problem+json",
+    return problem_response(
+        request,
+        exc.status_code,
+        str(exc.detail),
+    )
+
+
+# ======================================================
+# ERRORES DE NEGOCIO
+# ======================================================
+
+@app.exception_handler(DominioError)
+async def dominio_exception_handler(
+    request: Request,
+    exc: DominioError,
+):
+    return problem_response(
+        request,
+        estado_http(exc),
+        exc.mensaje,
     )
 
 
@@ -323,7 +361,7 @@ app.include_router(
 # ======================================================
 
 app.include_router(
-    controller.razas_router,
+    raza_controller.router,
     prefix="/api/v1",
 )
 
@@ -332,10 +370,16 @@ app.include_router(
 # CABALLOS
 # ======================================================
 
-app.include_router(
-    controller.caballos_router,
-    prefix="/api/v1",
-)
+# El router de caballos va primero: declara /mios antes que /{id_caballo}.
+for router_caballos in (
+    caballo_controller.router,
+    foto_controller.router,
+    favorito_controller.router,
+):
+    app.include_router(
+        router_caballos,
+        prefix="/api/v1",
+    )
 
 
 # ======================================================
@@ -343,7 +387,7 @@ app.include_router(
 # ======================================================
 
 app.include_router(
-    controller.publicaciones_router
+    publicacion_controller.router
 )
 
 

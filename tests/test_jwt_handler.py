@@ -62,11 +62,7 @@ def test_decode_access_token_sub_como_numero():
         algorithm=modulo.ALGORITHM,
     )
 
-    with patch("builtins.print") as imprimir:
-        resultado = modulo.decode_access_token(token)
-
-    assert resultado is None
-    imprimir.assert_called_once()
+    assert modulo.decode_access_token(token) is None
 
 
 def test_decode_access_token_sin_sub():
@@ -82,8 +78,13 @@ def test_decode_access_token_sin_sub():
 
 
 def test_decode_access_token_invalido():
-    with patch("builtins.print") as imprimir:
-        resultado = modulo.decode_access_token("token-invalido")
+    assert modulo.decode_access_token("token-invalido") is None
 
-    assert resultado is None
-    imprimir.assert_called_once()
+
+def test_jwt_token_service_delega_en_funciones():
+    servicio = modulo.JwtTokenService()
+
+    token = servicio.crear(7)
+
+    assert servicio.decodificar(token) == "7"
+    assert servicio.decodificar("token-invalido") is None

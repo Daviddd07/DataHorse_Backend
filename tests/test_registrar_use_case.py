@@ -1,10 +1,11 @@
 ﻿from datetime import date
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
 from app.application.use_cases.registrar_use_case import RegistrarUseCase
+from app.domain.entities.ubicacion import UbicacionGeocodificada
 from app.domain.exceptions import EmailAlreadyExistsError
 
 
@@ -14,8 +15,11 @@ def dependencias():
     hasher = Mock()
     hasher.hashear.return_value = "hash-prueba"
     repositorio.find_by_email.return_value = None
+    geocoding = Mock()
+    geocoding.geocodificar.return_value = None
 
-    caso = RegistrarUseCase(repositorio, hasher)
+    caso = RegistrarUseCase(repositorio, hasher, geocoding)
+    caso.geocoding = geocoding
     comando = SimpleNamespace(
         nombre="  Ana Pérez  ",
         correo="  ANA@EXAMPLE.COM ",
@@ -62,37 +66,31 @@ def test_registro_con_telefono_y_ubicacion_vacios(dependencias):
 def test_registro_con_geocodificacion_exitosa(dependencias):
     caso, repositorio, _, comando = dependencias
     comando.ubicacion = "Fusagasugá, Colombia"
-    datos_geo = {
-        "lat": 4.3365,
-        "lng": -74.3638,
-        "texto": "Fusagasugá, Cundinamarca, Colombia",
-        "ciudad": "Fusagasugá",
-        "departamento": "Cundinamarca",
-    }
+    datos_geo = UbicacionGeocodificada(
+        lat=4.3365,
+        lng=-74.3638,
+        texto="Fusagasugá, Cundinamarca, Colombia",
+        ciudad="Fusagasugá",
+        departamento="Cundinamarca",
+    )
+    caso.geocoding.geocodificar.return_value = datos_geo
 
-    with patch(
-        "app.application.use_cases.registrar_use_case.GeocodingService"
-    ) as geocoding:
-        geocoding.return_value.geocodificar.return_value = datos_geo
-        caso.ejecutar(comando)
+    caso.ejecutar(comando)
 
+    caso.geocoding.geocodificar.assert_called_once_with("Fusagasugá, Colombia")
     usuario = repositorio.create.call_args.args[0]
-    assert usuario.ubicacion_lat == datos_geo["lat"]
-    assert usuario.ubicacion_lng == datos_geo["lng"]
-    assert usuario.ubicacion_texto == datos_geo["texto"]
-    assert usuario.ciudad == datos_geo["ciudad"]
-    assert usuario.departamento == datos_geo["departamento"]
+    assert usuario.ubicacion_lat == datos_geo.lat
+    assert usuario.ubicacion_lng == datos_geo.lng
+    assert usuario.ubicacion_texto == datos_geo.texto
+    assert usuario.ciudad == datos_geo.ciudad
+    assert usuario.departamento == datos_geo.departamento
 
 
 def test_registro_con_geocodificacion_sin_resultados(dependencias):
     caso, repositorio, _, comando = dependencias
     comando.ubicacion = "Lugar desconocido"
 
-    with patch(
-        "app.application.use_cases.registrar_use_case.GeocodingService"
-    ) as geocoding:
-        geocoding.return_value.geocodificar.return_value = None
-        caso.ejecutar(comando)
+    caso.ejecutar(comando)
 
     usuario = repositorio.create.call_args.args[0]
     assert usuario.ubicacion_lat is None
