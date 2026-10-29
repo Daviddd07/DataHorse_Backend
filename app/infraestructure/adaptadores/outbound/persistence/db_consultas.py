@@ -1,7 +1,10 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.infraestructure.adaptadores.outbound.persistence.db_tablas import RazaModel
+from app.infraestructure.adaptadores.outbound.persistence.db_tablas import (
+    LogFrontendModel,
+    RazaModel,
+)
 
 
 def insertar_raza(db: Session, datos: dict) -> RazaModel:
@@ -20,3 +23,9 @@ def obtener_razas(db: Session) -> list[RazaModel]:
 def obtener_raza_por_id(db: Session, id_raza: int) -> RazaModel | None:
     stmt = select(RazaModel).where(RazaModel.id_raza == id_raza)
     return db.execute(stmt).scalar_one_or_none()
+
+
+def insertar_logs(db: Session, filas: list[dict]) -> int:
+    db.add_all([LogFrontendModel(**datos) for datos in filas])
+    db.commit()
+    return len(filas)

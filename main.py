@@ -34,6 +34,7 @@ from app.infraestructure.adaptadores.inbound.rest import (
     caballo_controller,
     favorito_controller,
     foto_controller,
+    log_controller,
     publicacion_controller,
     raza_controller,
 )
@@ -388,6 +389,16 @@ for router_caballos in (
 
 app.include_router(
     publicacion_controller.router
+)
+
+
+# ======================================================
+# LOGS
+# ======================================================
+
+app.include_router(
+    log_controller.logs_router,
+    prefix="/api/v1",
 )
 
 

@@ -39,6 +39,7 @@ from app.application.use_cases.publicacion_use_cases import (
     ObtenerPublicacionUseCase,
 )
 from app.application.use_cases.registrar_caballo_use_case import RegistrarCaballoUseCase
+from app.application.use_cases.registrar_logs_use_case import RegistrarLogsUseCase
 from app.application.use_cases.registrar_use_case import RegistrarUseCase
 from app.config.settings import FOTO_CABALLO_DIR, FOTO_CABALLO_URL_PREFIX
 from app.domain.ports.in_.caballo_ports import (
@@ -64,6 +65,7 @@ from app.domain.ports.in_.listar_razas_port import ListarRazasPort
 from app.domain.ports.in_.login_port import LoginPort
 from app.domain.ports.in_.publicacion_ports import ListarPublicacionesPort, ObtenerPublicacionPort
 from app.domain.ports.in_.registrar_caballo_port import RegistrarCaballoPort
+from app.domain.ports.in_.registrar_logs_port import RegistrarLogsPort
 from app.domain.ports.in_.registrar_usuario_port import RegistrarUsuarioPort
 from app.domain.ports.out.foto_repository import FotoRepository
 from app.domain.ports.out.token_port import TokenPort
@@ -87,6 +89,9 @@ from app.infraestructure.adaptadores.outbound.persistence.codigo_verificacion_re
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import get_db
 from app.infraestructure.adaptadores.outbound.persistence.favorito_repository_mysql import (
     FavoritoRepositoryMySQL,
+)
+from app.infraestructure.adaptadores.outbound.persistence.log_repository_mysql import (
+    LogRepositoryMySQL,
 )
 from app.infraestructure.adaptadores.outbound.persistence.foto_repository_mysql import (
     FotoRepositoryMySQL,
@@ -125,6 +130,7 @@ _raza_repo = RazaRepositoryMySQL()
 _publicacion_consultas = PublicacionConsultasMySQL()
 _ubicacion_consultas = UbicacionConsultasMySQL()
 _favorito_repo = FavoritoRepositoryMySQL()
+_log_repo = LogRepositoryMySQL()
 _auditoria = AuditoriaMySQL()
 _geocoding = NominatimGeocoding()
 _tokens = JwtTokenService()
@@ -246,6 +252,14 @@ def get_agregar_favorito_use_case() -> AgregarFavoritoPort:
 
 def get_quitar_favorito_use_case() -> QuitarFavoritoPort:
     return QuitarFavoritoUseCase(_favorito_repo, _auditoria)
+
+
+# ======================================================
+# LOGS DEL FRONTEND
+# ======================================================
+
+def get_registrar_logs_use_case() -> RegistrarLogsPort:
+    return RegistrarLogsUseCase(_log_repo)
 
 
 # ======================================================

@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, Response
 
@@ -28,6 +29,24 @@ def obtener_id_usuario_autenticado(
         return int(id_texto)
     except (ValueError, TypeError):
         raise HTTPException(status_code=401, detail="Sesión inválida")
+
+
+def obtener_id_usuario_opcional(
+    request: Request,
+    tokens: TokenPort = Depends(get_token_service),
+) -> Optional[int]:
+    """Como obtener_id_usuario_autenticado, pero devuelve None en lugar de lanzar 401."""
+    token = request.cookies.get(COOKIE_SESION)
+
+    if not token:
+        return None
+
+    id_texto = tokens.decodificar(token)
+
+    try:
+        return int(id_texto) if id_texto is not None else None
+    except (ValueError, TypeError):
+        return None
 
 
 def _opciones_cookie() -> dict:

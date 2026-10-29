@@ -1,5 +1,5 @@
 ﻿from datetime import date, datetime
-from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import BigInteger, Date, DateTime, Enum, ForeignKey, Integer, JSON, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import Base
@@ -136,3 +136,26 @@ class AuditLogModel(Base):
         server_default=func.current_timestamp(),
     )
 
+class LogFrontendModel(Base):
+    __tablename__ = "log_frontend"
+
+    id_log: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id_usuario: Mapped[int | None] = mapped_column(
+        ForeignKey("usuario.id_usuario", ondelete="SET NULL"),
+        nullable=True,
+    )
+    nivel: Mapped[str] = mapped_column(
+        Enum("debug", "info", "warn", "error", name="nivel_log"),
+        nullable=False,
+    )
+    mensaje: Mapped[str] = mapped_column(String(1000), nullable=False)
+    contexto: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    url: Mapped[str] = mapped_column(String(500), nullable=False)
+    user_agent: Mapped[str] = mapped_column(String(500), nullable=False)
+    sesion_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    fecha: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    creado_en: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.current_timestamp(),
+    )
