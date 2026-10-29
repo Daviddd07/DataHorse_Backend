@@ -22,3 +22,9 @@ report-task.txt
 
 # Copias de seguridad locales
 *.bak
+
+# Reportes de cobertura (se regeneran con pytest --cov)
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
