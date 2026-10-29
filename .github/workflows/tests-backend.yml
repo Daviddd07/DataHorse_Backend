@@ -16,6 +16,13 @@ jobs:
     name: Ejecutar pruebas de Python
     runs-on: ubuntu-latest
 
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_USER: test_user
+      DB_PASSWORD: test_password
+      DB_NAME: test_database
+
     steps:
       - name: Descargar el repositorio
         uses: actions/checkout@v6
