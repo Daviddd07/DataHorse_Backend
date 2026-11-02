@@ -285,7 +285,8 @@ def get_verificar_administrador_use_case() -> VerificarAdministradorPort:
 
 
 def get_resumen_admin_use_case() -> ObtenerResumenAdminPort:
-    return ObtenerResumenAdminUseCase(_admin_consultas)
+    # Dashboard de logs del botón del panel admin; sin GRAFANA_URL en el .env el botón se oculta.
+    return ObtenerResumenAdminUseCase(_admin_consultas, os.getenv("GRAFANA_URL", ""))
 
 
 def get_listar_usuarios_admin_use_case() -> ListarUsuariosAdminPort:

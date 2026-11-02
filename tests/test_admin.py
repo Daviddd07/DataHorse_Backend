@@ -67,8 +67,17 @@ def test_resumen_y_usuarios_delegan_en_las_consultas():
     consultas.resumen.return_value = {"usuarios": {}}
     consultas.listar_usuarios.return_value = [{"id_usuario": 1}]
 
-    assert ObtenerResumenAdminUseCase(consultas).ejecutar() == {"usuarios": {}}
+    resumen = ObtenerResumenAdminUseCase(consultas, "http://grafana/d/logs").ejecutar()
+
+    assert resumen == {"usuarios": {}, "enlaces": {"grafana": "http://grafana/d/logs"}}
     assert ListarUsuariosAdminUseCase(consultas).ejecutar() == [{"id_usuario": 1}]
+
+
+def test_resumen_sin_grafana_configurado():
+    consultas = Mock()
+    consultas.resumen.return_value = {"usuarios": {}}
+
+    assert ObtenerResumenAdminUseCase(consultas).ejecutar()["enlaces"] == {"grafana": None}
 
 
 # ======================================================

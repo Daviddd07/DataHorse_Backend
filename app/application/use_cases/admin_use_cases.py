@@ -27,11 +27,13 @@ class VerificarAdministradorUseCase(VerificarAdministradorPort):
 
 
 class ObtenerResumenAdminUseCase(ObtenerResumenAdminPort):
-    def __init__(self, consultas: AdminConsultasPort):
+    def __init__(self, consultas: AdminConsultasPort, url_grafana: str = ""):
         self._consultas = consultas
+        self._url_grafana = url_grafana
 
     def ejecutar(self) -> dict:
-        return self._consultas.resumen()
+        # Sin URL configurada el panel oculta el botón de logs.
+        return {**self._consultas.resumen(), "enlaces": {"grafana": self._url_grafana or None}}
 
 
 class ListarUsuariosAdminUseCase(ListarUsuariosAdminPort):
