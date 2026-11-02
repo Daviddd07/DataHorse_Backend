@@ -1,4 +1,3 @@
-
 name: Pruebas del backend DataHorse
 
 on:
@@ -16,12 +15,24 @@ jobs:
     name: Ejecutar pruebas de Python
     runs-on: ubuntu-latest
 
+    # Valores FALSOS solo para pruebas. Las pruebas usan mocks:
+    # no se conectan a MySQL, Mailjet ni Google.
     env:
+      ENVIRONMENT: test
       DB_HOST: 127.0.0.1
       DB_PORT: "3306"
       DB_USER: test_user
       DB_PASSWORD: test_password
       DB_NAME: test_database
+      SECRET_KEY: clave-falsa-solo-para-pruebas-ci-1234567890
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      CODIGO_SECRET: codigo-falso-solo-para-pruebas-ci
+      GOOGLE_CLIENT_ID: cliente-falso.apps.googleusercontent.com
+      MAILJET_API_KEY: falso
+      MAILJET_SECRET_KEY: falso
+      MAILJET_SENDER_EMAIL: ci@example.com
+      MAILJET_SENDER_NAME: DataHorse
 
     steps:
       - name: Descargar el repositorio
@@ -43,14 +54,8 @@ jobs:
       - name: Verificar dependencias
         run: python -m pip check
 
-      - name: Ejecutar pruebas
-        run: python -m pytest -v
-
-      - name: Generar informe de cobertura
-        if: always()
-        run: |
-          python -m pytest --cov=app --cov-report=xml:coverage.xml
-        continue-on-error: true
+      - name: Ejecutar pruebas con cobertura
+        run: python -m pytest -v --cov=app --cov-report=xml:coverage.xml --cov-report=term
 
       - name: Guardar informe de cobertura
         if: always()
