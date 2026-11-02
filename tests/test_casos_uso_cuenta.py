@@ -213,6 +213,13 @@ def test_iniciar_sesion_exitoso(sesion):
     assert auditoria.registrar.call_args.kwargs["resultado"] == "EXITOSO"
 
 
+def test_iniciar_sesion_cuenta_activa_con_google(sesion):
+    caso, _, repo, _ = sesion
+    repo.find_by_id.return_value = usuario(estado="activo_google")
+
+    assert caso.ejecutar("ana@test.com", "Clave1234") == 7
+
+
 def test_iniciar_sesion_credenciales_invalidas(sesion):
     caso, login, _, auditoria = sesion
     login.execute.side_effect = InvalidCredentialsError()
@@ -294,11 +301,33 @@ def test_google_crea_usuario_nuevo(google):
     repo.find_by_email.return_value = None
     registrar.ejecutar.return_value = usuario(id_usuario=8)
 
-    assert caso.ejecutar("cred").id_usuario == 8
+    nuevo = caso.ejecutar("cred")
+
+    assert nuevo.id_usuario == 8
     comando = registrar.ejecutar.call_args.args[0]
     assert comando.nombre == "ana"
     assert comando.contrasena.startswith("Aa1!")
     google_repo.vincular.assert_called_once_with(8, "g-1")
+    # Se creó con Google: queda sin contraseña propia hasta que la cree.
+    repo.actualizar_estado.assert_called_once_with(8, "activo_google")
+    assert nuevo.requiere_contrasena() is True
+
+
+def test_google_sin_contrasena_sigue_pidiendola(google):
+    caso, _, _, repo, google_repo = google
+    google_repo.obtener_id_usuario.return_value = 7
+    repo.find_by_id.return_value = usuario(estado="activo_google")
+
+    assert caso.ejecutar("cred").requiere_contrasena() is True
+    repo.actualizar_estado.assert_called_once_with(7, "activo_google")
+
+
+def test_google_activa_cuenta_pendiente_con_contrasena(google):
+    caso, _, _, repo, _ = google
+    repo.find_by_email.return_value = usuario(estado="pendiente")
+
+    assert caso.ejecutar("cred").requiere_contrasena() is False
+    repo.actualizar_estado.assert_called_once_with(7, "activo")
 
 
 def test_google_carrera_al_crear_usuario(google):

@@ -6,7 +6,7 @@ from app.application.services.codigo_verificacion_service import (
     TIPO_REGISTRO,
     CodigoVerificacionService,
 )
-from app.domain.entities.Usuario import Usuario
+from app.domain.entities.Usuario import ESTADO_ACTIVO_GOOGLE, Usuario
 from app.domain.exceptions import (
     AccesoDenegadoError,
     ConfiguracionError,
@@ -54,7 +54,7 @@ def _normalizar_correo(correo: str) -> str:
 
 
 def _esta_activo(usuario: Usuario) -> bool:
-    return (usuario.estado or "").lower() == ESTADO_ACTIVO
+    return (usuario.estado or "").lower() in (ESTADO_ACTIVO, ESTADO_ACTIVO_GOOGLE)
 
 
 def _buscar_por_correo(repo: UsuarioRepositoryPort, correo: str) -> Usuario:
@@ -195,21 +195,27 @@ class AutenticarConGoogleUseCase(AutenticarConGooglePort):
         nombre = nombre.strip() if nombre else correo.split("@")[0]
 
         id_vinculado = self._google_repo.obtener_id_usuario(google_sub)
+        creado = False
 
         if id_vinculado is not None:
             usuario = self._usuario_repo.find_by_id(id_vinculado)
             if usuario is None:
                 raise NoAutenticadoError("Usuario no encontrado")
         else:
-            usuario = self._obtener_o_crear(correo, nombre)
+            usuario, creado = self._obtener_o_crear(correo, nombre)
             self._vincular(usuario, google_sub)
 
-        # Google ya verificó el correo.
-        self._usuario_repo.actualizar_estado(usuario.id_usuario, ESTADO_ACTIVO)
+        # Google ya verificó el correo. Quien solo entra con Google sigue en activo_google
+        # hasta que cree su contraseña (al restablecerla pasa a activo).
+        estado = ESTADO_ACTIVO_GOOGLE if creado or usuario.requiere_contrasena() else ESTADO_ACTIVO
+        self._usuario_repo.actualizar_estado(usuario.id_usuario, estado)
+        usuario.estado = estado
         return usuario
 
-    def _obtener_o_crear(self, correo: str, nombre: str) -> Usuario:
+    def _obtener_o_crear(self, correo: str, nombre: str) -> tuple[Usuario, bool]:
+        """Devuelve el usuario y si se acaba de crear con Google."""
         usuario = self._usuario_repo.find_by_email(correo)
+        creado = False
 
         if usuario is None:
             try:
@@ -221,13 +227,14 @@ class AutenticarConGoogleUseCase(AutenticarConGooglePort):
                         contrasena="Aa1!" + secrets.token_urlsafe(32),
                     )
                 )
+                creado = True
             except CorreoYaRegistradoError:
                 usuario = self._usuario_repo.find_by_email(correo)
 
         if usuario is None:
             raise ErrorInternoError("No fue posible crear el usuario")
 
-        return usuario
+        return usuario, creado
 
     def _vincular(self, usuario: Usuario, google_sub: str) -> None:
         sub_existente = self._google_repo.obtener_sub(usuario.id_usuario)

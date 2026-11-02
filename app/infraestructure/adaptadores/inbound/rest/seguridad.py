@@ -3,7 +3,8 @@ from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, Response
 
-from app.config.dependencies import get_token_service
+from app.config.dependencies import get_token_service, get_verificar_administrador_use_case
+from app.domain.ports.in_.admin_ports import VerificarAdministradorPort
 from app.domain.ports.out.token_port import TokenPort
 
 COOKIE_SESION = "access_token"
@@ -29,6 +30,16 @@ def obtener_id_usuario_autenticado(
         return int(id_texto)
     except (ValueError, TypeError):
         raise HTTPException(status_code=401, detail="Sesión inválida")
+
+
+def obtener_id_admin_autenticado(
+    id_usuario: int = Depends(obtener_id_usuario_autenticado),
+    verificador: VerificarAdministradorPort = Depends(get_verificar_administrador_use_case),
+) -> int:
+    """Como obtener_id_usuario_autenticado, pero responde 403 si el usuario no es administrador."""
+    verificador.ejecutar(id_usuario)
+
+    return id_usuario
 
 
 def obtener_id_usuario_opcional(

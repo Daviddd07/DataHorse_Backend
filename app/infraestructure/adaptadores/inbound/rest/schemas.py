@@ -23,6 +23,7 @@ class UsuarioResponse(BaseModel):
     id: int
     correo: str
     nombre: str
+    es_admin: bool = False
 
 
 class GoogleAuthRequest(BaseModel):

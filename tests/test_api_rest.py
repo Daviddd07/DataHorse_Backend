@@ -224,7 +224,19 @@ def test_google(api):
     respuesta = api.post("/auth/google", json={"credential": "cred"})
 
     assert respuesta.json()["usuario"] == {"id": 7, "nombre": "Ana", "correo": "ana@test.com"}
+    assert respuesta.json()["requiere_contrasena"] is False
     assert "access_token=token-prueba" in respuesta.headers["set-cookie"]
+
+
+def test_google_avisa_si_falta_crear_contrasena(api):
+    api.usar(deps.get_autenticar_google_use_case).ejecutar.return_value = Usuario(
+        id_usuario=8, id_rol=2, nombre="Leo", correo="leo@test.com",
+        contrasena="hash", telefono=None, ubicacion=None, estado="activo_google",
+    )
+
+    respuesta = api.post("/auth/google", json={"credential": "cred"})
+
+    assert respuesta.json()["requiere_contrasena"] is True
 
 
 def test_forgot_y_reset_password(api):
@@ -247,8 +259,20 @@ def test_me(api):
     caso = api.usar(deps.get_usuario_actual_use_case)
     caso.ejecutar.return_value = USUARIO
 
-    assert api.get("/auth/me").json() == {"id": 7, "correo": "ana@test.com", "nombre": "Ana"}
+    assert api.get("/auth/me").json() == {
+        "id": 7, "correo": "ana@test.com", "nombre": "Ana", "es_admin": False,
+    }
     caso.ejecutar.assert_called_once_with(7)
+
+
+def test_me_indica_si_es_administrador(api):
+    caso = api.usar(deps.get_usuario_actual_use_case)
+    caso.ejecutar.return_value = Usuario(
+        id_usuario=1, id_rol=1, nombre="Admin", correo="admin@test.com",
+        contrasena="hash", telefono=None, ubicacion=None, estado="activo",
+    )
+
+    assert api.get("/auth/me").json()["es_admin"] is True
 
 
 # ======================================================
@@ -420,6 +444,40 @@ def test_publicaciones(api):
     assert api.get("/publicaciones").json() == [{"id_publicacion": 1}]
     assert api.get("/publicaciones/1").json() == {"id_publicacion": 1}
     detalle.ejecutar.assert_called_once_with(1, 7)
+
+
+# ======================================================
+# ADMINISTRACIÓN
+# ======================================================
+
+def test_admin_responde_resumen_y_usuarios(api):
+    verificar = api.usar(deps.get_verificar_administrador_use_case)
+    resumen = api.usar(deps.get_resumen_admin_use_case)
+    usuarios = api.usar(deps.get_listar_usuarios_admin_use_case)
+    resumen.ejecutar.return_value = {"usuarios": {"total": 3}}
+    usuarios.ejecutar.return_value = [{"id_usuario": 7}]
+
+    assert api.get("/api/v1/admin/resumen").json() == {"usuarios": {"total": 3}}
+    assert api.get("/api/v1/admin/usuarios").json() == [{"id_usuario": 7}]
+    verificar.ejecutar.assert_called_with(7)
+
+
+def test_admin_rechaza_a_quien_no_es_administrador(api):
+    verificar = api.usar(deps.get_verificar_administrador_use_case)
+    verificar.ejecutar.side_effect = AccesoDenegadoError("Solo los administradores pueden acceder")
+    resumen = api.usar(deps.get_resumen_admin_use_case)
+
+    respuesta = api.get("/api/v1/admin/resumen")
+
+    assert respuesta.status_code == 403
+    assert respuesta.json()["detail"] == "Solo los administradores pueden acceder"
+    resumen.ejecutar.assert_not_called()
+
+
+def test_admin_exige_sesion(api):
+    api.cookies.clear()
+
+    assert api.get("/api/v1/admin/usuarios").status_code == 401
 
 
 # ======================================================

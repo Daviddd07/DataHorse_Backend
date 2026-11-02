@@ -30,6 +30,7 @@ from sqlalchemy import text
 from app.domain.exceptions import DominioError
 
 from app.infraestructure.adaptadores.inbound.rest import (
+    admin_controller,
     auth_controller,
     caballo_controller,
     favorito_controller,
@@ -52,6 +53,7 @@ from app.infraestructure.adaptadores.outbound.persistence.technical_log_service 
 )
 
 from app.config.settings import (
+    ORIGENES_PERMITIDOS,
     UPLOAD_DIR,
 )
 
@@ -337,7 +339,7 @@ origenes_permitidos = [
     origen.strip()
     for origen in origenes_permitidos
     if origen.strip()
-]
+] or ORIGENES_PERMITIDOS  # sin ALLOWED_ORIGINS en el .env se usan los de settings.py
 
 app.add_middleware(
     CORSMiddleware,
@@ -398,6 +400,16 @@ app.include_router(
 
 app.include_router(
     log_controller.logs_router,
+    prefix="/api/v1",
+)
+
+
+# ======================================================
+# ADMINISTRACIÓN
+# ======================================================
+
+app.include_router(
+    admin_controller.router,
     prefix="/api/v1",
 )
 

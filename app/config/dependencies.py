@@ -10,6 +10,11 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.application.services.codigo_verificacion_service import CodigoVerificacionService
+from app.application.use_cases.admin_use_cases import (
+    ListarUsuariosAdminUseCase,
+    ObtenerResumenAdminUseCase,
+    VerificarAdministradorUseCase,
+)
 from app.application.use_cases.caballo_use_cases import (
     ActualizarCaballoUseCase,
     EliminarCaballoUseCase,
@@ -42,6 +47,11 @@ from app.application.use_cases.registrar_caballo_use_case import RegistrarCaball
 from app.application.use_cases.registrar_logs_use_case import RegistrarLogsUseCase
 from app.application.use_cases.registrar_use_case import RegistrarUseCase
 from app.config.settings import FOTO_CABALLO_DIR, FOTO_CABALLO_URL_PREFIX
+from app.domain.ports.in_.admin_ports import (
+    ListarUsuariosAdminPort,
+    ObtenerResumenAdminPort,
+    VerificarAdministradorPort,
+)
 from app.domain.ports.in_.caballo_ports import (
     ActualizarCaballoPort,
     EliminarCaballoPort,
@@ -77,6 +87,9 @@ from app.infraestructure.adaptadores.outbound.argon2_password_hasher import Argo
 from app.infraestructure.adaptadores.outbound.correo.mailjet_enviador import MailjetEnviadorCodigo
 from app.infraestructure.adaptadores.outbound.geocoding.nominatim_geocoding import (
     NominatimGeocoding,
+)
+from app.infraestructure.adaptadores.outbound.persistence.admin_consultas_mysql import (
+    AdminConsultasMySQL,
 )
 from app.infraestructure.adaptadores.outbound.persistence.audit_log_service import AuditoriaMySQL
 from app.infraestructure.adaptadores.outbound.persistence.caballo_repository_mysql import (
@@ -132,6 +145,7 @@ _ubicacion_consultas = UbicacionConsultasMySQL()
 _favorito_repo = FavoritoRepositoryMySQL()
 _log_repo = LogRepositoryMySQL()
 _auditoria = AuditoriaMySQL()
+_admin_consultas = AdminConsultasMySQL()
 _geocoding = NominatimGeocoding()
 _tokens = JwtTokenService()
 _almacenamiento = AlmacenamientoLocal(FOTO_CABALLO_DIR, FOTO_CABALLO_URL_PREFIX)
@@ -260,6 +274,22 @@ def get_quitar_favorito_use_case() -> QuitarFavoritoPort:
 
 def get_registrar_logs_use_case() -> RegistrarLogsPort:
     return RegistrarLogsUseCase(_log_repo)
+
+
+# ======================================================
+# ADMINISTRACIÓN
+# ======================================================
+
+def get_verificar_administrador_use_case() -> VerificarAdministradorPort:
+    return VerificarAdministradorUseCase(_usuario_repo)
+
+
+def get_resumen_admin_use_case() -> ObtenerResumenAdminPort:
+    return ObtenerResumenAdminUseCase(_admin_consultas)
+
+
+def get_listar_usuarios_admin_use_case() -> ListarUsuariosAdminPort:
+    return ListarUsuariosAdminUseCase(_admin_consultas)
 
 
 # ======================================================

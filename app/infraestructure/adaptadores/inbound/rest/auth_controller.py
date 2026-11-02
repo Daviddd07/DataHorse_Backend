@@ -121,6 +121,7 @@ def google_auth(
 
     return {
         "mensaje": "Autenticación con Google exitosa",
+        "requiere_contrasena": usuario.requiere_contrasena(),
         "usuario": {
             "id": usuario.id_usuario,
             "nombre": usuario.nombre,
@@ -157,7 +158,12 @@ def me(
 ):
     usuario = use_case.ejecutar(id_usuario)
 
-    return UsuarioResponse(id=usuario.id_usuario, correo=usuario.correo, nombre=usuario.nombre)
+    return UsuarioResponse(
+        id=usuario.id_usuario,
+        correo=usuario.correo,
+        nombre=usuario.nombre,
+        es_admin=usuario.es_administrador(),
+    )
 
 
 @router.post("/logout")
