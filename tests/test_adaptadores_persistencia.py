@@ -5,6 +5,7 @@ import pytest
 from conftest import fila, resultado
 
 from app.domain.entities.Caballo import Caballo
+from app.domain.entities.descendencia import Descendencia
 from app.domain.ports.out.caballo_repository_port import (
     CaballoRegistrado,
     CambiosPublicacion,
@@ -118,6 +119,29 @@ def test_actualizar_sin_publicacion(motor_falso):
     assert params(conexion, 0)["raza_id_raza"] == 1
 
 
+def test_registrar_guarda_la_descendencia(motor_falso):
+    conexion = motor_falso(caballos, resultado(lastrowid=5), resultado())
+    descendencia = Descendencia(padre_nombre="Rayo", crias_anteriores=2)
+
+    caballos.CaballoRepositoryMySQL().registrar(caballo(sexo="Hembra", descendencia=descendencia), None, None)
+
+    sentencia = str(conexion.execute.call_args_list[1].args[0])
+    assert "INSERT INTO descendencia" in sentencia
+    assert "ON DUPLICATE KEY UPDATE" in sentencia
+    valores = params(conexion, 1)
+    assert valores["id_caballo"] == 5
+    assert (valores["padre_nombre"], valores["crias_anteriores"], valores["madre_nombre"]) == ("Rayo", 2, None)
+
+
+def test_actualizar_reemplaza_la_descendencia(motor_falso):
+    conexion = motor_falso(caballos, resultado(), resultado())
+
+    caballos.CaballoRepositoryMySQL().actualizar(caballo(descendencia=Descendencia(modalidad="Trocha")), None, None)
+
+    assert "INSERT INTO descendencia" in str(conexion.execute.call_args_list[1].args[0])
+    assert params(conexion, 1)["modalidad"] == "Trocha"
+
+
 def test_eliminar_borra_publicacion_y_marca_caballo(motor_falso):
     conexion = motor_falso(caballos, resultado(), resultado())
 
@@ -161,13 +185,25 @@ def test_listar_de_propietario(motor_falso):
 
 def test_obtener_detalle_de_propietario(motor_falso):
     detalle = fila_mis_caballos(raza_id_raza=1)
-    motor_falso(caballos, resultado(first=detalle), resultado(filas=[FOTO]))
+    motor_falso(caballos, resultado(first=detalle), resultado(filas=[FOTO]), resultado(first=None))
 
     respuesta = caballos.CaballoConsultasMySQL().obtener_detalle_de_propietario(5, 10)
 
     assert respuesta["id_raza"] == 1
     assert respuesta["precio"] == 1000.0
     assert respuesta["fotos"] == [{"id_foto": 1, "ruta": "/uploads/a.jpg", "es_principal": True, "orden": 0}]
+    assert respuesta["descendencia"] is None
+
+
+def test_obtener_detalle_incluye_la_descendencia(motor_falso):
+    guardada = fila(**{campo: None for campo in Descendencia.campos()} | {"padre_nombre": "Rayo"})
+    motor_falso(caballos, resultado(first=fila_mis_caballos(raza_id_raza=1)), resultado(filas=[]), resultado(first=guardada))
+
+    respuesta = caballos.CaballoConsultasMySQL().obtener_detalle_de_propietario(5, 10)
+
+    assert respuesta["descendencia"]["padre_nombre"] == "Rayo"
+    assert respuesta["descendencia"]["madre_nombre"] is None
+    assert set(respuesta["descendencia"]) == set(Descendencia.campos())
 
 
 def test_obtener_detalle_de_propietario_inexistente(motor_falso):

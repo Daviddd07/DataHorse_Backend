@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Optional
 
+from app.domain.entities.descendencia import Descendencia
+
 
 @dataclass
 class Caballo:
@@ -22,6 +24,9 @@ class Caballo:
     ubicacion_texto: Optional[str] = None
     ciudad: Optional[str] = None
     departamento: Optional[str] = None
+
+    # None = no se envió (al actualizar, se conserva la que ya está guardada)
+    descendencia: Optional[Descendencia] = None
 
     @property
     def es_macho(self) -> bool:

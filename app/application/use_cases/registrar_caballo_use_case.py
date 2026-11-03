@@ -11,6 +11,7 @@ from app.domain.ports.out.caballo_repository_port import (
 from app.domain.ports.out.geocoding_port import GeocodingPort
 from app.domain.ports.out.raza_repository_port import RazaRepositoryPort
 from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
+from app.domain.services.validador_descendencia import normalizar_descendencia
 
 SEXOS_VALIDOS = ("Macho", "Hembra")
 
@@ -47,6 +48,8 @@ class RegistrarCaballoUseCase(RegistrarCaballoPort):
         if es_macho and (precio is None or precio <= 0):
             raise DatosInvalidosError("precio", "Debes ingresar un precio para el caballo")
 
+        descendencia = normalizar_descendencia(c.descendencia)
+
         if self._usuario_repo.find_by_id(c.id_propietario) is None:
             raise RecursoNoEncontradoError("Usuario no encontrado")
 
@@ -75,6 +78,7 @@ class RegistrarCaballoUseCase(RegistrarCaballoPort):
             ubicacion_texto=geo.texto if geo else c.ubicacion.strip(),
             ciudad=geo.ciudad if geo else None,
             departamento=geo.departamento if geo else None,
+            descendencia=descendencia,
         )
 
         publicacion = (

@@ -20,6 +20,18 @@ ORIGENES_PERMITIDOS = [
 
 
 # ======================================================
+# COMPATIBILIDAD CON IA (Groq). La API key va en el .env (GROQ_API_KEY)
+# ======================================================
+
+# Modelo principal y de respaldo (se usa si el principal no tiene cupo)
+GROQ_MODELOS = ("openai/gpt-oss-120b", "openai/gpt-oss-20b")
+GROQ_TIMEOUT_SEGUNDOS = 30
+
+LIMITE_EVALUACIONES_DIARIAS = 5  # por usuario; las reutilizadas no cuentan
+ZONA_HORARIA_HORAS = -5          # Colombia (UTC-5, sin horario de verano): define cuándo empieza "hoy"
+
+
+# ======================================================
 # RUTAS DEL PROYECTO
 # ======================================================
 

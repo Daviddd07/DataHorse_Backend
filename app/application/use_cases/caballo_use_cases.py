@@ -18,6 +18,7 @@ from app.domain.ports.out.caballo_repository_port import (
 )
 from app.domain.ports.out.geocoding_port import GeocodingPort
 from app.domain.ports.out.ubicacion_consultas_port import UbicacionConsultasPort
+from app.domain.services.validador_descendencia import normalizar_descendencia
 
 DISPONIBILIDAD_EDITABLE = ("Disponible", "No disponible")
 
@@ -74,6 +75,8 @@ class ActualizarCaballoUseCase(ActualizarCaballoPort):
         if c.disponibilidad not in DISPONIBILIDAD_EDITABLE:
             raise DatosInvalidosError("disponibilidad", "Disponibilidad invalida")
 
+        descendencia = normalizar_descendencia(c.descendencia)
+
         actual = obtener_caballo_activo(self._caballo_repo, c.id_caballo, c.id_usuario)
 
         if raza_nueva is None and c.id_raza is None:
@@ -103,6 +106,7 @@ class ActualizarCaballoUseCase(ActualizarCaballoPort):
             ubicacion_texto=geo.texto if geo else ubicacion,
             ciudad=geo.ciudad if geo else None,
             departamento=geo.departamento if geo else None,
+            descendencia=descendencia,
         )
 
         publicacion = (

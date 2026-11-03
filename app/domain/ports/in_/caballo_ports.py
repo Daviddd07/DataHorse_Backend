@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import List, Optional
 
+from app.domain.entities.descendencia import Descendencia
+
 
 @dataclass
 class ActualizarCaballoComando:
@@ -18,6 +20,8 @@ class ActualizarCaballoComando:
     id_raza: Optional[int] = None
     raza_personalizada: Optional[str] = None
     precio: Optional[float] = None
+    # None = no se envió: se conserva la descendencia guardada
+    descendencia: Optional[Descendencia] = None
 
 
 class ListarMisCaballosPort(ABC):

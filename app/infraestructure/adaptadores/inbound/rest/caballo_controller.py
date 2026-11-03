@@ -8,6 +8,7 @@ from app.config.dependencies import (
     get_obtener_caballo_use_case,
     get_registrar_caballo_use_case,
 )
+from app.domain.entities.descendencia import Descendencia
 from app.domain.ports.in_.caballo_ports import (
     ActualizarCaballoComando,
     ActualizarCaballoPort,
@@ -24,10 +25,22 @@ from app.infraestructure.adaptadores.inbound.rest.errores import error_interno
 from app.infraestructure.adaptadores.inbound.rest.schemas import (
     CaballoCreateRequest,
     CaballoUpdateRequest,
+    DescendenciaSchema,
 )
 from app.infraestructure.adaptadores.inbound.rest.seguridad import obtener_id_usuario_autenticado
 
 router = APIRouter(prefix="/caballos", tags=["caballos"])
+
+
+def _datos_caballo(body: CaballoCreateRequest | CaballoUpdateRequest) -> dict:
+    """Campos del body listos para el comando, con la descendencia como entidad del dominio."""
+    datos = body.model_dump(exclude={"descendencia"})
+    datos["descendencia"] = _a_descendencia(body.descendencia)
+    return datos
+
+
+def _a_descendencia(schema: DescendenciaSchema | None) -> Descendencia | None:
+    return Descendencia(**schema.model_dump()) if schema is not None else None
 
 
 # ======================================================
@@ -63,7 +76,7 @@ def registrar_caballo(
 ):
     with error_interno("Error al guardar publicación"):
         registrado = use_case.ejecutar(
-            RegistrarCaballoComando(id_propietario=id_usuario, **body.model_dump())
+            RegistrarCaballoComando(id_propietario=id_usuario, **_datos_caballo(body))
         )
 
     es_macho = body.sexo == "Macho"
@@ -118,7 +131,7 @@ def actualizar_caballo(
             ActualizarCaballoComando(
                 id_caballo=id_caballo,
                 id_usuario=id_usuario,
-                **body.model_dump(),
+                **_datos_caballo(body),
             )
         )
 

@@ -33,6 +33,7 @@ from app.infraestructure.adaptadores.inbound.rest import (
     admin_controller,
     auth_controller,
     caballo_controller,
+    compatibilidad_controller,
     favorito_controller,
     foto_controller,
     log_controller,
@@ -410,6 +411,16 @@ app.include_router(
 
 app.include_router(
     admin_controller.router,
+    prefix="/api/v1",
+)
+
+
+# ======================================================
+# COMPATIBILIDAD (IA)
+# ======================================================
+
+app.include_router(
+    compatibilidad_controller.router,
     prefix="/api/v1",
 )
 

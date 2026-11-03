@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Optional
 
+from app.domain.entities.descendencia import Descendencia
 from app.domain.ports.out.caballo_repository_port import CaballoRegistrado
 
 
@@ -21,6 +22,7 @@ class RegistrarCaballoComando:
     raza_personalizada: Optional[str] = None  # cuando el usuario eligió "Otro"
     # Solo aplica cuando sexo == "Macho": el caballo también se publica en el marketplace.
     precio: Optional[float] = None
+    descendencia: Optional[Descendencia] = None
 
 
 class RegistrarCaballoPort(ABC):

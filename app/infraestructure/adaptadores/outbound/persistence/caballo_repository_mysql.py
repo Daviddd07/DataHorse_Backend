@@ -3,6 +3,7 @@ from typing import List, Optional
 from sqlalchemy import text
 
 from app.domain.entities.Caballo import Caballo
+from app.domain.entities.descendencia import Descendencia
 from app.domain.ports.out.caballo_consultas_port import CaballoConsultasPort
 from app.domain.ports.out.caballo_repository_port import (
     CaballoRegistrado,
@@ -22,6 +23,40 @@ def _insertar_raza(connection, nombre: str, descripcion: str) -> int:
         {"nombre": nombre, "descripcion": descripcion},
     )
     return int(resultado.lastrowid)
+
+
+# Los nombres de columna salen de la entidad (constantes del código), nunca del cliente.
+_COLUMNAS_DESCENDENCIA = Descendencia.campos()
+
+
+def _guardar_descendencia(connection, id_caballo: int, descendencia: Descendencia) -> None:
+    """Crea o reemplaza la descendencia del caballo (una fila por caballo)."""
+    columnas = ", ".join(_COLUMNAS_DESCENDENCIA)
+    valores = ", ".join(f":{c}" for c in _COLUMNAS_DESCENDENCIA)
+    cambios = ", ".join(f"{c} = nueva.{c}" for c in _COLUMNAS_DESCENDENCIA)
+
+    connection.execute(
+        text(f"""
+            INSERT INTO descendencia (caballo_id_caballo, {columnas})
+            VALUES (:id_caballo, {valores}) AS nueva
+            ON DUPLICATE KEY UPDATE {cambios}
+        """),
+        {"id_caballo": id_caballo, **{c: getattr(descendencia, c) for c in _COLUMNAS_DESCENDENCIA}},
+    )
+
+
+def obtener_descendencia(connection, id_caballo: int) -> Optional[dict]:
+    """Descendencia del caballo como dict, o None si nunca se registró."""
+    fila = connection.execute(
+        text(f"""
+            SELECT {", ".join(_COLUMNAS_DESCENDENCIA)}
+            FROM descendencia
+            WHERE caballo_id_caballo = :id_caballo
+        """),
+        {"id_caballo": id_caballo},
+    ).first()
+
+    return {c: getattr(fila, c) for c in _COLUMNAS_DESCENDENCIA} if fila else None
 
 
 def _a_entidad(fila) -> Caballo:
@@ -129,6 +164,9 @@ class CaballoRepositoryMySQL(CaballoRepositoryPort):
             )
             id_caballo = int(resultado.lastrowid)
 
+            if caballo.descendencia is not None:
+                _guardar_descendencia(connection, id_caballo, caballo.descendencia)
+
             id_publicacion = None
             if publicacion is not None:
                 resultado = connection.execute(
@@ -209,6 +247,9 @@ class CaballoRepositoryMySQL(CaballoRepositoryPort):
                     "id_caballo": caballo.id_caballo,
                 },
             )
+
+            if caballo.descendencia is not None:
+                _guardar_descendencia(connection, caballo.id_caballo, caballo.descendencia)
 
             if publicacion is not None:
                 connection.execute(
@@ -329,6 +370,7 @@ class CaballoConsultasMySQL(CaballoConsultasPort):
                 return None
 
             fotos = listar_fotos(connection, id_caballo)
+            descendencia = obtener_descendencia(connection, id_caballo)
 
         return {
             "id_caballo": caballo.id_caballo,
@@ -348,6 +390,7 @@ class CaballoConsultasMySQL(CaballoConsultasPort):
             "id_publicacion": caballo.id_publicacion,
             "precio": _precio(caballo.precio_referencia),
             "fotos": fotos,
+            "descendencia": descendencia,
         }
 
 

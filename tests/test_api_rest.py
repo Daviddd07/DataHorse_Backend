@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 import main
 from app.config import dependencies as deps
 from app.domain.entities.Usuario import Usuario
+from app.domain.entities.descendencia import Descendencia
 from app.domain.entities.foto_caballo import FotoCaballo
 from app.domain.entities.Raza import Raza
 from app.domain.exceptions import (
@@ -314,6 +315,34 @@ def test_registrar_caballo(api, sexo, mensaje, precio):
     comando = caso.ejecutar.call_args.args[0]
     assert comando.id_propietario == 7
     assert comando.fecha_nacimiento == date(2020, 1, 1)
+    assert comando.descendencia is None
+
+
+def test_registrar_caballo_con_descendencia(api):
+    caso = api.usar(deps.get_registrar_caballo_use_case)
+    caso.ejecutar.return_value = CaballoRegistrado(5, 1, 9)
+    descendencia = {"padre_nombre": "Rayo", "modalidad": "Trocha", "crias_anteriores": 2}
+
+    respuesta = api.post("/api/v1/caballos", json={**CABALLO_BODY, "descendencia": descendencia})
+
+    assert respuesta.status_code == 201
+    enviada = caso.ejecutar.call_args.args[0].descendencia
+    assert isinstance(enviada, Descendencia)
+    assert (enviada.padre_nombre, enviada.modalidad, enviada.crias_anteriores) == ("Rayo", "Trocha", 2)
+    assert enviada.madre_nombre is None
+
+
+@pytest.mark.parametrize(
+    "descendencia",
+    [{"crias_anteriores": -1}, {"padre_nombre": "x" * 121}, {"notas": "x" * 2001}],
+)
+def test_registrar_caballo_descendencia_fuera_de_limites(api, descendencia):
+    caso = api.usar(deps.get_registrar_caballo_use_case)
+
+    respuesta = api.post("/api/v1/caballos", json={**CABALLO_BODY, "descendencia": descendencia})
+
+    assert respuesta.status_code == 422
+    caso.ejecutar.assert_not_called()
 
 
 def test_registrar_caballo_datos_invalidos(api):
@@ -367,7 +396,17 @@ def test_actualizar_y_eliminar_caballo(api):
     assert eliminado.json() == {"mensaje": "Caballo eliminado correctamente", "id_caballo": 5}
     comando = actualizar.ejecutar.call_args.args[0]
     assert (comando.id_caballo, comando.id_usuario, comando.precio) == (5, 7, 1000)
+    assert comando.descendencia is None
     eliminar.ejecutar.assert_called_once_with(5, 7)
+
+
+def test_actualizar_caballo_con_descendencia(api):
+    actualizar = api.usar(deps.get_actualizar_caballo_use_case)
+    body = {k: v for k, v in CABALLO_BODY.items() if k != "sexo"}
+
+    api.put("/api/v1/caballos/5", json={**body, "descendencia": {"temperamento": "Dócil"}})
+
+    assert actualizar.ejecutar.call_args.args[0].descendencia.temperamento == "Dócil"
 
 
 # ======================================================
@@ -478,6 +517,76 @@ def test_admin_exige_sesion(api):
     api.cookies.clear()
 
     assert api.get("/api/v1/admin/usuarios").status_code == 401
+
+
+# ======================================================
+# COMPATIBILIDAD (IA)
+# ======================================================
+
+def test_evaluar_compatibilidad(api):
+    caso = api.usar(deps.get_evaluar_compatibilidad_use_case)
+    caso.ejecutar.return_value = {"resultado": {"puntuacion": 78}}
+
+    respuesta = api.post("/api/v1/compatibilidad", json={"id_caballo": 10, "id_yegua": 8})
+
+    assert respuesta.status_code == 200
+    assert respuesta.json() == {"resultado": {"puntuacion": 78}}
+    caso.ejecutar.assert_called_once_with(7, 10, 8)
+
+
+@pytest.mark.parametrize(
+    ("error", "estado"),
+    [
+        (DemasiadosIntentosError("Alcanzaste el límite de 5 evaluaciones por hoy."), 429),
+        (ServicioExternoError("El servicio de IA no está disponible en este momento."), 502),
+        (RecursoNoEncontradoError("Yegua no encontrada"), 404),
+    ],
+)
+def test_evaluar_compatibilidad_errores(api, error, estado):
+    api.usar(deps.get_evaluar_compatibilidad_use_case).ejecutar.side_effect = error
+
+    respuesta = api.post("/api/v1/compatibilidad", json={"id_caballo": 10, "id_yegua": 8})
+
+    assert respuesta.status_code == estado
+    assert respuesta.json()["detail"] == error.mensaje
+
+
+def test_consultar_cupo_compatibilidad(api):
+    caso = api.usar(deps.get_cupo_compatibilidad_use_case)
+    caso.ejecutar.return_value = {"limite": 5, "usadas": 1, "restantes": 4}
+
+    assert api.get("/api/v1/compatibilidad/cupo").json() == {"limite": 5, "usadas": 1, "restantes": 4}
+    caso.ejecutar.assert_called_once_with(7)
+
+
+def test_mis_resultados_de_compatibilidad(api):
+    listar = api.usar(deps.get_listar_resultados_compatibilidad_use_case)
+    obtener = api.usar(deps.get_obtener_resultado_compatibilidad_use_case)
+    listar.ejecutar.return_value = [{"id_solicitud": 1}]
+    obtener.ejecutar.return_value = {"id_solicitud": 1, "desde_cache": True}
+
+    assert api.get("/api/v1/compatibilidad/mis-resultados").json() == [{"id_solicitud": 1}]
+    assert api.get("/api/v1/compatibilidad/resultados/1").json()["desde_cache"] is True
+    listar.ejecutar.assert_called_once_with(7)
+    obtener.ejecutar.assert_called_once_with(7, 1)
+
+
+def test_resultado_de_otro_usuario_da_404(api):
+    api.usar(deps.get_obtener_resultado_compatibilidad_use_case).ejecutar.side_effect = (
+        RecursoNoEncontradoError("Estudio no encontrado")
+    )
+
+    respuesta = api.get("/api/v1/compatibilidad/resultados/99")
+
+    assert respuesta.status_code == 404
+    assert respuesta.json()["detail"] == "Estudio no encontrado"
+
+
+def test_evaluar_compatibilidad_valida_el_body(api):
+    caso = api.usar(deps.get_evaluar_compatibilidad_use_case)
+
+    assert api.post("/api/v1/compatibilidad", json={"id_caballo": 0, "id_yegua": 8}).status_code == 422
+    caso.ejecutar.assert_not_called()
 
 
 # ======================================================

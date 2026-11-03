@@ -12,6 +12,7 @@ from app.application.use_cases.caballo_use_cases import (
 )
 from app.application.use_cases.registrar_caballo_use_case import RegistrarCaballoUseCase
 from app.domain.entities.Caballo import Caballo
+from app.domain.entities.descendencia import Descendencia
 from app.domain.entities.ubicacion import UbicacionGeocodificada
 from app.domain.exceptions import DatosInvalidosError, RecursoNoEncontradoError
 from app.domain.ports.in_.caballo_ports import ActualizarCaballoComando
@@ -88,6 +89,27 @@ def test_registrar_macho_crea_publicacion_y_geocodifica(registro):
     assert raza_nueva is None
     assert publicacion.titulo == "Lucero - Macho"
     assert publicacion.precio_referencia == 1000
+    assert guardado.descendencia is None
+
+
+def test_registrar_limpia_la_descendencia(registro):
+    caso, caballo_repo, *_ = registro
+
+    caso.ejecutar(comando_registro(descendencia=Descendencia(padre_nombre=" Rayo ", notas="  ")))
+
+    guardado = caballo_repo.registrar.call_args.args[0]
+    assert guardado.descendencia.padre_nombre == "Rayo"
+    assert guardado.descendencia.notas is None
+
+
+def test_registrar_rechaza_descendencia_invalida(registro):
+    caso, caballo_repo, *_ = registro
+    comando = comando_registro(descendencia=Descendencia(temperamento="Feliz"))
+
+    with pytest.raises(DatosInvalidosError, match="Temperamento"):
+        caso.ejecutar(comando)
+
+    caballo_repo.registrar.assert_not_called()
 
 
 def test_registrar_hembra_sin_publicacion_y_sin_geo(registro):
@@ -191,6 +213,17 @@ def test_actualizar_macho_sin_cambio_de_ubicacion(actualizacion):
     assert guardado.ubicacion_lat is None
     assert raza_nueva is None
     assert publicacion.titulo == "Lucero - Macho"
+    # Sin descendencia en el comando no se toca la guardada
+    assert guardado.descendencia is None
+
+
+def test_actualizar_guarda_la_descendencia(actualizacion):
+    caso, repo, _ = actualizacion
+
+    caso.ejecutar(comando_actualizar(descendencia=Descendencia(modalidad=" Trocha ")))
+
+    guardado = repo.actualizar.call_args.args[0]
+    assert guardado.descendencia.modalidad == "Trocha"
 
 
 def test_actualizar_hembra_con_raza_nueva_y_ubicacion_nueva(actualizacion):
