@@ -46,6 +46,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 UPLOAD_DIR = BASE_DIR / "uploads"
 FOTO_CABALLO_DIR = UPLOAD_DIR / "caballos"
 FOTO_CABALLO_URL_PREFIX = "/uploads/caballos"
+FOTO_PERFIL_DIR = UPLOAD_DIR / "perfiles"
+FOTO_PERFIL_URL_PREFIX = "/uploads/perfiles"
+FOTO_PERFIL_LADO = 512                    # px: las fotos de perfil se guardan cuadradas
 
 # Límites de subida
 FOTO_MAX_SIZE = 5 * 1024 * 1024            # 5 MB por foto

@@ -31,6 +31,7 @@ from app.infraestructure.adaptadores.inbound.rest.schemas import (
     ResetPasswordRequest,
     UsuarioResponse,
     VerificarCodigoRequest,
+    ruta_publica,
 )
 from app.infraestructure.adaptadores.inbound.rest.seguridad import (
     abrir_sesion,
@@ -163,6 +164,7 @@ def me(
         correo=usuario.correo,
         nombre=usuario.nombre,
         es_admin=usuario.es_administrador(),
+        foto_perfil=ruta_publica(usuario.foto_perfil),
     )
 
 

@@ -261,7 +261,7 @@ def test_me(api):
     caso.ejecutar.return_value = USUARIO
 
     assert api.get("/auth/me").json() == {
-        "id": 7, "correo": "ana@test.com", "nombre": "Ana", "es_admin": False,
+        "id": 7, "correo": "ana@test.com", "nombre": "Ana", "es_admin": False, "foto_perfil": None,
     }
     caso.ejecutar.assert_called_once_with(7)
 

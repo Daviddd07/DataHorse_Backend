@@ -35,6 +35,7 @@ from app.infraestructure.adaptadores.inbound.rest import (
     caballo_controller,
     compatibilidad_controller,
     conversacion_controller,
+    cuenta_controller,
     favorito_controller,
     foto_controller,
     log_controller,
@@ -407,6 +408,16 @@ app.include_router(
 
 app.include_router(
     log_controller.logs_router,
+    prefix="/api/v1",
+)
+
+
+# ======================================================
+# MI CUENTA
+# ======================================================
+
+app.include_router(
+    cuenta_controller.router,
     prefix="/api/v1",
 )
 

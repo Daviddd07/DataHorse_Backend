@@ -24,6 +24,34 @@ class UsuarioResponse(BaseModel):
     correo: str
     nombre: str
     es_admin: bool = False
+    foto_perfil: str | None = None
+
+
+def ruta_publica(ruta: str | None) -> str | None:
+    """El almacenamiento guarda 'uploads/...'; el frontend la pega a la URL del backend,
+    así que la API siempre la entrega con '/' inicial (igual que las fotos de caballos)."""
+    return f"/{ruta.lstrip('/')}" if ruta else None
+
+
+class PerfilResponse(BaseModel):
+    id: int
+    nombre: str
+    correo: str
+    telefono: str | None = None
+    ciudad: str | None = None
+    departamento: str | None = None
+    fecha_registro: date | None = None
+    es_admin: bool = False
+    # Entró con Google y todavía no creó su propia contraseña
+    solo_google: bool = False
+    foto_perfil: str | None = None  # ruta pública (/uploads/perfiles/...)
+
+
+class ActualizarPerfilRequest(BaseModel):
+    nombre: str = Field(..., max_length=120)
+    telefono: str | None = Field(None, max_length=30)
+    ciudad: str | None = Field(None, max_length=120)
+    departamento: str | None = Field(None, max_length=120)
 
 
 class GoogleAuthRequest(BaseModel):

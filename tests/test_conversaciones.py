@@ -210,6 +210,7 @@ def fila_resumen(**cambios):
         id_conversacion=3, publicacion_id_publicacion=8, fecha_creacion=date(2026, 11, 4),
         titulo="Lucero en venta", id_vendedor=10, nombre_vendedor="Vendedor",
         id_interesado=7, nombre_interesado="Ana", ultimo_mensaje="Hola",
+        foto_vendedor="uploads/perfiles/vendedor.jpg", foto_interesado=None,
         fecha_ultimo_mensaje=AHORA, id_autor_ultimo=7, no_leidos=2,
     )
     datos.update(cambios)
@@ -263,14 +264,16 @@ def test_repo_resumen_visto_por_cada_participante(motor_falso):
     repo = ConversacionRepositoryMySQL()
 
     interesado = repo.obtener_resumen(3, 7)
-    assert interesado["otro_usuario"] == {"id": 10, "nombre": "Vendedor"}
+    assert interesado["otro_usuario"] == {
+        "id": 10, "nombre": "Vendedor", "foto_perfil": "/uploads/perfiles/vendedor.jpg",
+    }
     assert interesado["soy_vendedor"] is False
     assert interesado["ultimo_mensaje_es_mio"] is True
     assert interesado["fecha_ultimo_mensaje"] == "2026-11-04T10:30:00"
     assert interesado["no_leidos"] == 2
 
     vendedor = repo.obtener_resumen(3, 10)
-    assert vendedor["otro_usuario"] == {"id": 7, "nombre": "Ana"}
+    assert vendedor["otro_usuario"] == {"id": 7, "nombre": "Ana", "foto_perfil": None}
     assert vendedor["soy_vendedor"] is True
 
     assert repo.obtener_resumen(99, 7) is None

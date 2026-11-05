@@ -94,6 +94,22 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
     def actualizar_contrasena(self, id_usuario: int, contrasena_hash: str) -> None:
         self._actualizar(id_usuario, contrasena=contrasena_hash)
 
+    def actualizar_perfil(self, usuario: Usuario) -> None:
+        self._actualizar(
+            usuario.id_usuario,
+            nombre=usuario.nombre,
+            telefono=usuario.telefono,
+            ubicacion=usuario.ubicacion,
+            ubicacion_lat=usuario.ubicacion_lat,
+            ubicacion_lng=usuario.ubicacion_lng,
+            ubicacion_texto=usuario.ubicacion_texto,
+            ciudad=usuario.ciudad,
+            departamento=usuario.departamento,
+        )
+
+    def actualizar_foto_perfil(self, id_usuario: int, ruta: Optional[str]) -> None:
+        self._actualizar(id_usuario, foto_perfil=ruta)
+
     @staticmethod
     def _actualizar(id_usuario: int, **valores) -> None:
         with SessionLocal() as db:
@@ -123,5 +139,6 @@ class UsuarioRepositoryMySQL(UsuarioRepositoryPort):
             departamento=usuario_db.departamento,
             
             fecha_registro=usuario_db.fecha_registro,
-            estado=usuario_db.estado
+            estado=usuario_db.estado,
+            foto_perfil=usuario_db.foto_perfil,
         )

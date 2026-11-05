@@ -19,3 +19,10 @@ class UsuarioRepositoryPort(ABC):
 
     @abstractmethod
     def actualizar_contrasena(self, id_usuario: int, contrasena_hash: str) -> None: ...
+
+    @abstractmethod
+    def actualizar_perfil(self, usuario: Usuario) -> None:
+        """Guarda nombre, teléfono y ubicación (nunca correo, rol ni estado)."""
+
+    @abstractmethod
+    def actualizar_foto_perfil(self, id_usuario: int, ruta: Optional[str]) -> None: ...

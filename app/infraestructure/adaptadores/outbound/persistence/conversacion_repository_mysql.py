@@ -30,6 +30,11 @@ def _iso(valor) -> Optional[str]:
     return valor.isoformat() if valor is not None else None
 
 
+def _foto_publica(ruta: Optional[str]) -> Optional[str]:
+    # En la BD la ruta va sin '/' inicial; el frontend la pega a la URL del backend
+    return f"/{ruta.lstrip('/')}" if ruta else None
+
+
 class ConversacionRepositoryMySQL(ConversacionRepositoryPort):
 
     def obtener_dueno_publicacion_activa(self, id_publicacion: int) -> Optional[int]:
@@ -113,7 +118,9 @@ class ConversacionRepositoryMySQL(ConversacionRepositoryPort):
     _SELECT_RESUMEN = """
         SELECT c.id_conversacion, c.publicacion_id_publicacion, c.fecha_creacion,
                p.titulo, p.usuario_id_usuario AS id_vendedor, uv.nombre AS nombre_vendedor,
+               uv.foto_perfil AS foto_vendedor,
                c.usuario_id_interesado AS id_interesado, ui.nombre AS nombre_interesado,
+               ui.foto_perfil AS foto_interesado,
                m.contenido AS ultimo_mensaje, m.fecha_envio AS fecha_ultimo_mensaje,
                m.usuario_id_usuario AS id_autor_ultimo,
                (SELECT COUNT(*)
@@ -143,6 +150,8 @@ class ConversacionRepositoryMySQL(ConversacionRepositoryPort):
             "otro_usuario": {
                 "id": fila.id_interesado if soy_vendedor else fila.id_vendedor,
                 "nombre": fila.nombre_interesado if soy_vendedor else fila.nombre_vendedor,
+                # Ruta pública de su foto de perfil (o None para mostrar su inicial)
+                "foto_perfil": _foto_publica(fila.foto_interesado if soy_vendedor else fila.foto_vendedor),
             },
             "ultimo_mensaje": fila.ultimo_mensaje,
             "fecha_ultimo_mensaje": _iso(fila.fecha_ultimo_mensaje),

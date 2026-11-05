@@ -27,6 +27,7 @@ class Usuario:
     
     fecha_registro: date = None
     estado: str = None
+    foto_perfil: Optional[str] = None  # ruta pública (/uploads/perfiles/...) o None
 
     def es_administrador(self) -> bool:
         return self.id_rol == ROL_ADMINISTRADOR_ID

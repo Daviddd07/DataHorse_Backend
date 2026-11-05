@@ -29,6 +29,7 @@ class UsuarioModel(Base):
     ubicacion_texto: Mapped[str | None] = mapped_column(String(255), nullable=True)
     ciudad: Mapped[str | None] = mapped_column(String(120), nullable=True)
     departamento: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    foto_perfil: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     rol = relationship("RolModel")
 

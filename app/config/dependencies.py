@@ -15,6 +15,12 @@ from app.application.use_cases.admin_use_cases import (
     ObtenerResumenAdminUseCase,
     VerificarAdministradorUseCase,
 )
+from app.application.use_cases.perfil_use_cases import (
+    ActualizarPerfilUseCase,
+    CambiarFotoPerfilUseCase,
+    ObtenerPerfilUseCase,
+    QuitarFotoPerfilUseCase,
+)
 from app.application.use_cases.compatibilidad_use_cases import (
     ConsultarCupoCompatibilidadUseCase,
     EvaluarCompatibilidadUseCase,
@@ -65,6 +71,9 @@ from app.application.use_cases.registrar_use_case import RegistrarUseCase
 from app.config.settings import (
     FOTO_CABALLO_DIR,
     FOTO_CABALLO_URL_PREFIX,
+    FOTO_PERFIL_DIR,
+    FOTO_PERFIL_LADO,
+    FOTO_PERFIL_URL_PREFIX,
     GROQ_MODELOS,
     GROQ_TIMEOUT_SEGUNDOS,
     LIMITE_EVALUACIONES_DIARIAS,
@@ -80,6 +89,15 @@ from app.domain.ports.in_.admin_ports import (
     ListarUsuariosAdminPort,
     ObtenerResumenAdminPort,
     VerificarAdministradorPort,
+)
+from app.domain.ports.in_.perfil_ports import (
+    ActualizarPerfilPort,
+    CambiarFotoPerfilPort,
+    ObtenerPerfilPort,
+    QuitarFotoPerfilPort,
+)
+from app.infraestructure.adaptadores.outbound.imagenes.pillow_procesador_imagen import (
+    PillowProcesadorImagen,
 )
 from app.domain.ports.in_.caballo_ports import (
     ActualizarCaballoPort,
@@ -200,6 +218,8 @@ _evaluador_compatibilidad = GroqEvaluadorCompatibilidad(
 _geocoding = NominatimGeocoding()
 _tokens = JwtTokenService()
 _almacenamiento = AlmacenamientoLocal(FOTO_CABALLO_DIR, FOTO_CABALLO_URL_PREFIX)
+_almacenamiento_perfiles = AlmacenamientoLocal(FOTO_PERFIL_DIR, FOTO_PERFIL_URL_PREFIX)
+_procesador_imagen = PillowProcesadorImagen(FOTO_PERFIL_LADO)
 _verificador_google = VerificadorGoogle(os.getenv("GOOGLE_CLIENT_ID"))
 
 _codigos = CodigoVerificacionService(
@@ -265,6 +285,26 @@ def get_solicitar_recuperacion_use_case() -> SolicitarRecuperacionPort:
 
 def get_restablecer_contrasena_use_case() -> RestablecerContrasenaPort:
     return RestablecerContrasenaUseCase(_usuario_repo, _codigos, _hasher)
+
+
+# ======================================================
+# MI CUENTA (perfil)
+# ======================================================
+
+def get_obtener_perfil_use_case() -> ObtenerPerfilPort:
+    return ObtenerPerfilUseCase(_usuario_repo)
+
+
+def get_actualizar_perfil_use_case() -> ActualizarPerfilPort:
+    return ActualizarPerfilUseCase(_usuario_repo, _geocoding)
+
+
+def get_cambiar_foto_perfil_use_case() -> CambiarFotoPerfilPort:
+    return CambiarFotoPerfilUseCase(_usuario_repo, _almacenamiento_perfiles, _procesador_imagen)
+
+
+def get_quitar_foto_perfil_use_case() -> QuitarFotoPerfilPort:
+    return QuitarFotoPerfilUseCase(_usuario_repo, _almacenamiento_perfiles)
 
 
 def get_usuario_actual_use_case() -> ObtenerUsuarioActualPort:
