@@ -28,6 +28,16 @@ from app.application.use_cases.caballo_use_cases import (
     ListarUbicacionesUseCase,
     ObtenerCaballoUseCase,
 )
+from app.application.use_cases.conversacion_use_cases import (
+    AbrirConversacionUseCase,
+    ContarNoLeidosUseCase,
+    EnviarMensajeUseCase,
+    ListarConversacionesUseCase,
+    MarcarLeidosUseCase,
+    ObtenerConversacionUseCase,
+    VerificarParticipanteUseCase,
+    reloj_local,
+)
 from app.application.use_cases.cuenta_use_cases import (
     AutenticarConGoogleUseCase,
     IniciarSesionUseCase,
@@ -78,6 +88,15 @@ from app.domain.ports.in_.caballo_ports import (
     ListarUbicacionesPort,
     ObtenerCaballoPort,
 )
+from app.domain.ports.in_.conversacion_ports import (
+    AbrirConversacionPort,
+    ContarNoLeidosPort,
+    EnviarMensajePort,
+    ListarConversacionesPort,
+    MarcarLeidosPort,
+    ObtenerConversacionPort,
+    VerificarParticipantePort,
+)
 from app.domain.ports.in_.cuenta_ports import (
     AutenticarConGooglePort,
     IniciarSesionPort,
@@ -121,6 +140,9 @@ from app.infraestructure.adaptadores.outbound.persistence.caballo_repository_mys
 )
 from app.infraestructure.adaptadores.outbound.persistence.codigo_verificacion_repository_mysql import (
     CodigoVerificacionRepositoryMySQL,
+)
+from app.infraestructure.adaptadores.outbound.persistence.conversacion_repository_mysql import (
+    ConversacionRepositoryMySQL,
 )
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import get_db
 from app.infraestructure.adaptadores.outbound.persistence.favorito_repository_mysql import (
@@ -170,6 +192,8 @@ _log_repo = LogRepositoryMySQL()
 _auditoria = AuditoriaMySQL()
 _admin_consultas = AdminConsultasMySQL()
 _compatibilidad_repo = CompatibilidadRepositoryMySQL()
+_conversacion_repo = ConversacionRepositoryMySQL()
+_reloj_local = reloj_local(ZONA_HORARIA_HORAS)
 _evaluador_compatibilidad = GroqEvaluadorCompatibilidad(
     os.getenv("GROQ_API_KEY"), GROQ_MODELOS, GROQ_TIMEOUT_SEGUNDOS
 )
@@ -322,6 +346,40 @@ def get_listar_resultados_compatibilidad_use_case() -> ListarResultadosCompatibi
 
 def get_obtener_resultado_compatibilidad_use_case() -> ObtenerResultadoCompatibilidadPort:
     return ObtenerResultadoCompatibilidadUseCase(_compatibilidad_repo)
+
+
+# ======================================================
+# CONVERSACIONES (chat entre propietarios)
+# ======================================================
+
+def get_abrir_conversacion_use_case() -> AbrirConversacionPort:
+    return AbrirConversacionUseCase(_conversacion_repo, _auditoria, _reloj_local)
+
+
+def get_listar_conversaciones_use_case() -> ListarConversacionesPort:
+    return ListarConversacionesUseCase(_conversacion_repo)
+
+
+def get_verificar_participante_use_case() -> VerificarParticipantePort:
+    return VerificarParticipanteUseCase(_conversacion_repo)
+
+
+def get_obtener_conversacion_use_case() -> ObtenerConversacionPort:
+    return ObtenerConversacionUseCase(_conversacion_repo, get_verificar_participante_use_case())
+
+
+def get_contar_no_leidos_use_case() -> ContarNoLeidosPort:
+    return ContarNoLeidosUseCase(_conversacion_repo)
+
+
+def get_marcar_leidos_use_case() -> MarcarLeidosPort:
+    return MarcarLeidosUseCase(_conversacion_repo, get_verificar_participante_use_case())
+
+
+def get_enviar_mensaje_use_case() -> EnviarMensajePort:
+    return EnviarMensajeUseCase(
+        _conversacion_repo, get_verificar_participante_use_case(), _reloj_local
+    )
 
 
 # ======================================================

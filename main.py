@@ -34,6 +34,7 @@ from app.infraestructure.adaptadores.inbound.rest import (
     auth_controller,
     caballo_controller,
     compatibilidad_controller,
+    conversacion_controller,
     favorito_controller,
     foto_controller,
     log_controller,
@@ -43,6 +44,11 @@ from app.infraestructure.adaptadores.inbound.rest import (
 
 from app.infraestructure.adaptadores.inbound.rest.errores import (
     estado_http,
+)
+
+from app.infraestructure.adaptadores.inbound.websocket import (
+    conversacion_ws,
+    notificaciones_ws,
 )
 
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import (
@@ -422,6 +428,24 @@ app.include_router(
 app.include_router(
     compatibilidad_controller.router,
     prefix="/api/v1",
+)
+
+
+# ======================================================
+# CONVERSACIONES (REST + WebSocket en tiempo real)
+# ======================================================
+
+app.include_router(
+    conversacion_controller.router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    conversacion_ws.router
+)
+
+app.include_router(
+    notificaciones_ws.router
 )
 
 
