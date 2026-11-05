@@ -2,9 +2,9 @@ name: Pruebas del backend DataHorse
 
 on:
   push:
-    branches: [pre]
+    branches: [dev]
   pull_request:
-    branches: [pre]
+    branches: [dev]
   workflow_dispatch:
 
 permissions:
