@@ -6,11 +6,13 @@ from sqlalchemy.exc import IntegrityError
 
 from app.domain.entities.conversacion import (
     ESTADO_CONVERSACION_ACTIVA,
+    ESTADO_CONVERSACION_FINALIZADA,
     ESTADO_MENSAJE_LEIDO,
     ESTADO_MENSAJE_NO_LEIDO,
     Conversacion,
     Mensaje,
 )
+from app.domain.entities.resena import ResumenCalificacion
 from app.domain.ports.out.conversacion_repository_port import ConversacionRepositoryPort
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import engine
 
@@ -91,7 +93,7 @@ class ConversacionRepositoryMySQL(ConversacionRepositoryPort):
         with engine.connect() as connection:
             fila = connection.execute(
                 text("""
-                    SELECT c.id_conversacion, c.publicacion_id_publicacion,
+                    SELECT c.id_conversacion, c.publicacion_id_publicacion, c.estado,
                            c.usuario_id_interesado, p.usuario_id_usuario AS id_vendedor,
                            p.titulo, ui.nombre AS nombre_interesado, uv.nombre AS nombre_vendedor
                     FROM conversacion c
@@ -113,10 +115,43 @@ class ConversacionRepositoryMySQL(ConversacionRepositoryPort):
             nombre_interesado=fila.nombre_interesado,
             nombre_vendedor=fila.nombre_vendedor,
             titulo_publicacion=fila.titulo,
+            estado=fila.estado,
         )
 
+    def cambiar_estado(self, id_conversacion: int, estado: str) -> bool:
+        with engine.begin() as connection:
+            resultado = connection.execute(
+                text("""
+                    UPDATE conversacion
+                    SET estado = :estado
+                    WHERE id_conversacion = :id_conversacion
+                      AND estado <> :estado
+                """),
+                {"estado": estado, "id_conversacion": id_conversacion},
+            )
+        return resultado.rowcount > 0
+
+    def contactos_de(self, id_usuario: int) -> List[int]:
+        with engine.connect() as connection:
+            filas = connection.execute(
+                text("""
+                    SELECT DISTINCT IF(p.usuario_id_usuario = :id_usuario,
+                                       c.usuario_id_interesado,
+                                       p.usuario_id_usuario) AS id_contacto
+                    FROM conversacion c
+                    INNER JOIN publicacion p ON p.id_publicacion = c.publicacion_id_publicacion
+                    WHERE c.usuario_id_interesado = :id_usuario
+                       OR p.usuario_id_usuario = :id_usuario
+                """),
+                {"id_usuario": id_usuario},
+            )
+            return [int(fila.id_contacto) for fila in filas]
+
+    # El "otro" participante, visto desde :id_usuario
+    _OTRO = "IF(p.usuario_id_usuario = :id_usuario, c.usuario_id_interesado, p.usuario_id_usuario)"
+
     _SELECT_RESUMEN = """
-        SELECT c.id_conversacion, c.publicacion_id_publicacion, c.fecha_creacion,
+        SELECT c.id_conversacion, c.publicacion_id_publicacion, c.fecha_creacion, c.estado,
                p.titulo, p.usuario_id_usuario AS id_vendedor, uv.nombre AS nombre_vendedor,
                uv.foto_perfil AS foto_vendedor,
                c.usuario_id_interesado AS id_interesado, ui.nombre AS nombre_interesado,
@@ -127,7 +162,11 @@ class ConversacionRepositoryMySQL(ConversacionRepositoryPort):
                 FROM mensaje nl
                 WHERE nl.conversacion_id_conversacion = c.id_conversacion
                   AND nl.usuario_id_usuario <> :id_usuario
-                  AND nl.estado_lectura = 'no_leido') AS no_leidos
+                  AND nl.estado_lectura = 'no_leido') AS no_leidos,
+               (SELECT AVG(r.calificacion) FROM resena r
+                WHERE r.id_usuario_evaluado = """ + _OTRO + """) AS promedio_otro,
+               (SELECT COUNT(*) FROM resena r
+                WHERE r.id_usuario_evaluado = """ + _OTRO + """) AS total_otro
         FROM conversacion c
         INNER JOIN publicacion p ON p.id_publicacion = c.publicacion_id_publicacion
         INNER JOIN usuario uv ON uv.id_usuario = p.usuario_id_usuario
@@ -152,7 +191,11 @@ class ConversacionRepositoryMySQL(ConversacionRepositoryPort):
                 "nombre": fila.nombre_interesado if soy_vendedor else fila.nombre_vendedor,
                 # Ruta pública de su foto de perfil (o None para mostrar su inicial)
                 "foto_perfil": _foto_publica(fila.foto_interesado if soy_vendedor else fila.foto_vendedor),
+                # Estrellas (1 a 5) que le han dado en otras conversaciones
+                "calificacion": ResumenCalificacion.desde(fila.promedio_otro, fila.total_otro).a_dict(),
             },
+            "estado": fila.estado,
+            "finalizada": fila.estado == ESTADO_CONVERSACION_FINALIZADA,
             "ultimo_mensaje": fila.ultimo_mensaje,
             "fecha_ultimo_mensaje": _iso(fila.fecha_ultimo_mensaje),
             "ultimo_mensaje_es_mio": fila.id_autor_ultimo == id_usuario,

@@ -41,6 +41,7 @@ from app.infraestructure.adaptadores.inbound.rest import (
     log_controller,
     publicacion_controller,
     raza_controller,
+    usuario_publico_controller,
 )
 
 from app.infraestructure.adaptadores.inbound.rest.errores import (
@@ -448,6 +449,12 @@ app.include_router(
 
 app.include_router(
     conversacion_controller.router,
+    prefix="/api/v1",
+)
+
+# Estrellas (reseñas) de cualquier usuario, para mostrarlas en chat y publicaciones
+app.include_router(
+    usuario_publico_controller.router,
     prefix="/api/v1",
 )
 

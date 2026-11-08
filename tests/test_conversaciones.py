@@ -165,6 +165,7 @@ def test_obtener_conversacion_exige_participar():
 
 def test_enviar_mensaje_guarda_el_texto_limpio():
     repo, verificador = Mock(), Mock()
+    verificador.ejecutar.return_value = CONVERSACION
     repo.guardar_mensaje.return_value = MENSAJE
 
     assert EnviarMensajeUseCase(repo, verificador, lambda: AHORA).ejecutar(7, 3, "  Hola  ") is MENSAJE
@@ -212,6 +213,7 @@ def fila_resumen(**cambios):
         id_interesado=7, nombre_interesado="Ana", ultimo_mensaje="Hola",
         foto_vendedor="uploads/perfiles/vendedor.jpg", foto_interesado=None,
         fecha_ultimo_mensaje=AHORA, id_autor_ultimo=7, no_leidos=2,
+        estado="activa", promedio_otro=4.5, total_otro=2,
     )
     datos.update(cambios)
     return fila(**datos)
@@ -252,6 +254,7 @@ def test_repo_obtener(motor_falso):
     motor_falso(MODULO_REPO, resultado(first=fila(
         id_conversacion=3, publicacion_id_publicacion=8, usuario_id_interesado=7, id_vendedor=10,
         titulo="Lucero en venta", nombre_interesado="Ana", nombre_vendedor="Vendedor",
+        estado="activa",
     )), resultado(first=None))
     repo = ConversacionRepositoryMySQL()
     assert repo.obtener(3) == CONVERSACION
@@ -266,14 +269,20 @@ def test_repo_resumen_visto_por_cada_participante(motor_falso):
     interesado = repo.obtener_resumen(3, 7)
     assert interesado["otro_usuario"] == {
         "id": 10, "nombre": "Vendedor", "foto_perfil": "/uploads/perfiles/vendedor.jpg",
+        "calificacion": {"promedio": 4.5, "total": 2},
     }
+    assert interesado["estado"] == "activa"
+    assert interesado["finalizada"] is False
     assert interesado["soy_vendedor"] is False
     assert interesado["ultimo_mensaje_es_mio"] is True
     assert interesado["fecha_ultimo_mensaje"] == "2026-11-04T10:30:00"
     assert interesado["no_leidos"] == 2
 
     vendedor = repo.obtener_resumen(3, 10)
-    assert vendedor["otro_usuario"] == {"id": 7, "nombre": "Ana", "foto_perfil": None}
+    assert vendedor["otro_usuario"] == {
+        "id": 7, "nombre": "Ana", "foto_perfil": None,
+        "calificacion": {"promedio": 4.5, "total": 2},
+    }
     assert vendedor["soy_vendedor"] is True
 
     assert repo.obtener_resumen(99, 7) is None

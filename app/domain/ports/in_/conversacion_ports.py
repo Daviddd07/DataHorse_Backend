@@ -37,6 +37,12 @@ class MarcarLeidosPort(ABC):
     def ejecutar(self, id_usuario: int, id_conversacion: int) -> int: ...
 
 
+class FinalizarConversacionPort(ABC):
+    @abstractmethod
+    def ejecutar(self, id_usuario: int, id_conversacion: int) -> Conversacion:
+        """Pasa la conversación a 'finalizada' (queda en solo lectura y se puede calificar)."""
+
+
 class EnviarMensajePort(ABC):
     @abstractmethod
     def ejecutar(self, id_usuario: int, id_conversacion: int, contenido: str) -> Mensaje: ...

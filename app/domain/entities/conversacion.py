@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 ESTADO_CONVERSACION_ACTIVA = "activa"
+ESTADO_CONVERSACION_FINALIZADA = "finalizada"
 ESTADO_MENSAJE_NO_LEIDO = "no_leido"
 ESTADO_MENSAJE_LEIDO = "leido"
 LONGITUD_MAXIMA_MENSAJE = 2000
@@ -18,9 +19,13 @@ class Conversacion:
     nombre_interesado: str = ""
     nombre_vendedor: str = ""
     titulo_publicacion: str = ""
+    estado: str = ESTADO_CONVERSACION_ACTIVA
 
     def es_participante(self, id_usuario: int) -> bool:
         return id_usuario in (self.id_interesado, self.id_vendedor)
+
+    def esta_finalizada(self) -> bool:
+        return self.estado == ESTADO_CONVERSACION_FINALIZADA
 
     def otro_participante(self, id_usuario: int) -> int:
         return self.id_vendedor if id_usuario == self.id_interesado else self.id_interesado

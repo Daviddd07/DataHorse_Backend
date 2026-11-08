@@ -38,11 +38,18 @@ from app.application.use_cases.conversacion_use_cases import (
     AbrirConversacionUseCase,
     ContarNoLeidosUseCase,
     EnviarMensajeUseCase,
+    FinalizarConversacionUseCase,
     ListarConversacionesUseCase,
     MarcarLeidosUseCase,
     ObtenerConversacionUseCase,
     VerificarParticipanteUseCase,
     reloj_local,
+)
+from app.application.use_cases.resena_use_cases import (
+    CalificarUsuarioUseCase,
+    ObtenerCalificacionUseCase,
+    ObtenerEstadoConexionUseCase,
+    RegistrarConexionUseCase,
 )
 from app.application.use_cases.cuenta_use_cases import (
     AutenticarConGoogleUseCase,
@@ -110,10 +117,17 @@ from app.domain.ports.in_.conversacion_ports import (
     AbrirConversacionPort,
     ContarNoLeidosPort,
     EnviarMensajePort,
+    FinalizarConversacionPort,
     ListarConversacionesPort,
     MarcarLeidosPort,
     ObtenerConversacionPort,
     VerificarParticipantePort,
+)
+from app.domain.ports.in_.resena_ports import (
+    CalificarUsuarioPort,
+    ObtenerCalificacionPort,
+    ObtenerEstadoConexionPort,
+    RegistrarConexionPort,
 )
 from app.domain.ports.in_.cuenta_ports import (
     AutenticarConGooglePort,
@@ -162,6 +176,16 @@ from app.infraestructure.adaptadores.outbound.persistence.codigo_verificacion_re
 from app.infraestructure.adaptadores.outbound.persistence.conversacion_repository_mysql import (
     ConversacionRepositoryMySQL,
 )
+from app.infraestructure.adaptadores.outbound.persistence.resena_repository_mysql import (
+    ResenaRepositoryMySQL,
+)
+from app.infraestructure.adaptadores.outbound.persistence.ultima_conexion_repository_mysql import (
+    UltimaConexionRepositoryMySQL,
+)
+from app.infraestructure.adaptadores.inbound.websocket.connection_manager import (
+    notificaciones_manager,
+)
+from app.infraestructure.adaptadores.inbound.websocket.presencia import EnLineaPorWebSocket
 from app.infraestructure.adaptadores.outbound.persistence.db_conexion import get_db
 from app.infraestructure.adaptadores.outbound.persistence.favorito_repository_mysql import (
     FavoritoRepositoryMySQL,
@@ -211,6 +235,9 @@ _auditoria = AuditoriaMySQL()
 _admin_consultas = AdminConsultasMySQL()
 _compatibilidad_repo = CompatibilidadRepositoryMySQL()
 _conversacion_repo = ConversacionRepositoryMySQL()
+_resena_repo = ResenaRepositoryMySQL()
+_ultima_conexion_repo = UltimaConexionRepositoryMySQL()
+_en_linea = EnLineaPorWebSocket(notificaciones_manager)
 _reloj_local = reloj_local(ZONA_HORARIA_HORAS)
 _evaluador_compatibilidad = GroqEvaluadorCompatibilidad(
     os.getenv("GROQ_API_KEY"), GROQ_MODELOS, GROQ_TIMEOUT_SEGUNDOS
@@ -397,7 +424,7 @@ def get_abrir_conversacion_use_case() -> AbrirConversacionPort:
 
 
 def get_listar_conversaciones_use_case() -> ListarConversacionesPort:
-    return ListarConversacionesUseCase(_conversacion_repo)
+    return ListarConversacionesUseCase(_conversacion_repo, get_estado_conexion_use_case())
 
 
 def get_verificar_participante_use_case() -> VerificarParticipantePort:
@@ -405,7 +432,23 @@ def get_verificar_participante_use_case() -> VerificarParticipantePort:
 
 
 def get_obtener_conversacion_use_case() -> ObtenerConversacionPort:
-    return ObtenerConversacionUseCase(_conversacion_repo, get_verificar_participante_use_case())
+    return ObtenerConversacionUseCase(
+        _conversacion_repo,
+        get_verificar_participante_use_case(),
+        _resena_repo,
+        get_estado_conexion_use_case(),
+    )
+
+
+def get_finalizar_conversacion_use_case() -> FinalizarConversacionPort:
+    return FinalizarConversacionUseCase(
+        _conversacion_repo, get_verificar_participante_use_case(), _auditoria
+    )
+
+
+def get_buscar_contactos():
+    """Función id_usuario -> usuarios a avisar cuando se conecta o se desconecta."""
+    return _conversacion_repo.contactos_de
 
 
 def get_contar_no_leidos_use_case() -> ContarNoLeidosPort:
@@ -420,6 +463,28 @@ def get_enviar_mensaje_use_case() -> EnviarMensajePort:
     return EnviarMensajeUseCase(
         _conversacion_repo, get_verificar_participante_use_case(), _reloj_local
     )
+
+
+# ======================================================
+# RESEÑAS Y ESTADO EN LÍNEA
+# ======================================================
+
+def get_calificar_usuario_use_case() -> CalificarUsuarioPort:
+    return CalificarUsuarioUseCase(
+        get_verificar_participante_use_case(), _resena_repo, _auditoria, _reloj_local
+    )
+
+
+def get_obtener_calificacion_use_case() -> ObtenerCalificacionPort:
+    return ObtenerCalificacionUseCase(_resena_repo)
+
+
+def get_estado_conexion_use_case() -> ObtenerEstadoConexionPort:
+    return ObtenerEstadoConexionUseCase(_en_linea, _ultima_conexion_repo)
+
+
+def get_registrar_conexion_use_case() -> RegistrarConexionPort:
+    return RegistrarConexionUseCase(_ultima_conexion_repo, _reloj_local)
 
 
 # ======================================================

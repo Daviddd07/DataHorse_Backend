@@ -21,6 +21,14 @@ class ConversacionRepositoryPort(ABC):
     def obtener(self, id_conversacion: int) -> Optional[Conversacion]: ...
 
     @abstractmethod
+    def cambiar_estado(self, id_conversacion: int, estado: str) -> bool:
+        """Devuelve True si el estado cambió (False si ya tenía ese estado)."""
+
+    @abstractmethod
+    def contactos_de(self, id_usuario: int) -> List[int]:
+        """Usuarios con los que id_usuario tiene alguna conversación."""
+
+    @abstractmethod
     def obtener_resumen(self, id_conversacion: int, id_usuario: int) -> Optional[dict]:
         """Datos de cabecera de la conversación vistos por id_usuario (título, el otro participante...)."""
 
