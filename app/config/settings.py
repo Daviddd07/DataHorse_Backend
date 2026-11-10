@@ -10,6 +10,19 @@ ESTADO_INICIAL = "activo"
 
 
 # ======================================================
+# SEGURIDAD
+# ======================================================
+
+# Login: tras LOGIN_MAX_FALLOS contraseñas incorrectas para un mismo correo
+# dentro de la ventana, ese correo queda bloqueado hasta que caduque el fallo más antiguo.
+LOGIN_MAX_FALLOS = 5
+LOGIN_VENTANA_SEGUNDOS = 15 * 60
+
+# Largo mínimo de los secretos del .env (se revisa al arrancar)
+LARGO_MINIMO_SECRETO = 32
+
+
+# ======================================================
 # CORS
 # ======================================================
 

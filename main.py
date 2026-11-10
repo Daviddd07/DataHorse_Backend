@@ -34,6 +34,8 @@ from app.application.use_cases.admin_inicial_use_case import DatosAdminInicial
 
 from app.config.dependencies import get_crear_admin_inicial_use_case
 
+from app.config.validar_configuracion import validar_configuracion
+
 from app.infraestructure.adaptadores.inbound.rest import (
     admin_controller,
     auth_controller,
@@ -127,6 +129,8 @@ def crear_admin_inicial() -> None:
 
 @asynccontextmanager
 async def ciclo_de_vida(_app: FastAPI):
+    # Primero: sin secretos válidos la API no debe arrancar
+    validar_configuracion()
     crear_admin_inicial()
     yield
 

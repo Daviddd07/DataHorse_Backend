@@ -85,6 +85,8 @@ from app.config.settings import (
     GROQ_MODELOS,
     GROQ_TIMEOUT_SEGUNDOS,
     LIMITE_EVALUACIONES_DIARIAS,
+    LOGIN_MAX_FALLOS,
+    LOGIN_VENTANA_SEGUNDOS,
     ZONA_HORARIA_HORAS,
 )
 from app.domain.ports.in_.compatibilidad_ports import (
@@ -215,6 +217,7 @@ from app.infraestructure.adaptadores.outbound.persistence.usuario_repository_mys
 from app.infraestructure.adaptadores.outbound.security.google_verificador import VerificadorGoogle
 from app.infraestructure.adaptadores.outbound.security.hmac_codigo_hasher import HmacCodigoHasher
 from app.infraestructure.adaptadores.outbound.security.jwt_handler import JwtTokenService
+from app.infraestructure.adaptadores.outbound.security.limite_intentos_memoria import LimiteIntentosEnMemoria
 
 load_dotenv(override=True)
 
@@ -245,6 +248,8 @@ _evaluador_compatibilidad = GroqEvaluadorCompatibilidad(
 )
 _geocoding = NominatimGeocoding()
 _tokens = JwtTokenService()
+# Con estado: debe ser uno solo para que los fallos se acumulen entre solicitudes
+_limite_login = LimiteIntentosEnMemoria(LOGIN_MAX_FALLOS, LOGIN_VENTANA_SEGUNDOS)
 _almacenamiento = AlmacenamientoLocal(FOTO_CABALLO_DIR, FOTO_CABALLO_URL_PREFIX)
 _almacenamiento_perfiles = AlmacenamientoLocal(FOTO_PERFIL_DIR, FOTO_PERFIL_URL_PREFIX)
 _procesador_imagen = PillowProcesadorImagen(FOTO_PERFIL_LADO)
@@ -299,7 +304,7 @@ def get_reenviar_codigo_use_case() -> ReenviarCodigoPort:
 
 
 def get_iniciar_sesion_use_case() -> IniciarSesionPort:
-    return IniciarSesionUseCase(get_login_use_case(), _usuario_repo, _auditoria)
+    return IniciarSesionUseCase(get_login_use_case(), _usuario_repo, _auditoria, _limite_login)
 
 
 def get_autenticar_google_use_case() -> AutenticarConGooglePort:

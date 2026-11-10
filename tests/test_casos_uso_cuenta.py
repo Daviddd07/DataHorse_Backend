@@ -35,6 +35,9 @@ from app.domain.exceptions import (
     SolicitudInvalidaError,
 )
 from app.domain.ports.in_.registrar_usuario_port import RegistrarUsuarioComando
+from app.infraestructure.adaptadores.outbound.security.limite_intentos_memoria import (
+    LimiteIntentosEnMemoria,
+)
 
 
 def usuario(estado="activo", **cambios):
@@ -203,7 +206,60 @@ def sesion():
     login, repo, auditoria = Mock(), Mock(), Mock()
     login.execute.return_value = "7"
     repo.find_by_id.return_value = usuario()
-    return IniciarSesionUseCase(login, repo, auditoria), login, repo, auditoria
+    limite = LimiteIntentosEnMemoria(max_fallos=3, ventana_segundos=600)
+    return IniciarSesionUseCase(login, repo, auditoria, limite), login, repo, auditoria
+
+
+def test_iniciar_sesion_bloquea_tras_varios_fallos(sesion):
+    caso, login, _, auditoria = sesion
+    login.execute.side_effect = InvalidCredentialsError()
+
+    for _ in range(3):
+        with pytest.raises(InvalidCredentialsError):
+            caso.ejecutar("ana@test.com", "mala")
+
+    # Bloqueado: ni siquiera con la contraseña correcta, y sin consultar al login
+    login.execute.side_effect = None
+    login.execute.reset_mock()
+    with pytest.raises(DemasiadosIntentosError, match="Intenta de nuevo en 10 minutos"):
+        caso.ejecutar(" ANA@test.com ", "Clave1234")
+
+    login.execute.assert_not_called()
+    assert auditoria.registrar.call_args.kwargs["resultado"] == "BLOQUEADO"
+
+
+def test_iniciar_sesion_bloqueo_es_por_correo(sesion):
+    caso, login, _, _ = sesion
+    login.execute.side_effect = InvalidCredentialsError()
+    for _ in range(3):
+        with pytest.raises(InvalidCredentialsError):
+            caso.ejecutar("ana@test.com", "mala")
+
+    login.execute.side_effect = None
+    assert caso.ejecutar("luis@test.com", "Clave1234") == 7
+
+
+def test_iniciar_sesion_exitoso_reinicia_los_fallos(sesion):
+    caso, login, _, _ = sesion
+    for _ in range(2):
+        login.execute.side_effect = InvalidCredentialsError()
+        with pytest.raises(InvalidCredentialsError):
+            caso.ejecutar("ana@test.com", "mala")
+        login.execute.side_effect = None
+        assert caso.ejecutar("ana@test.com", "Clave1234") == 7
+
+
+def test_limite_intentos_se_libera_al_pasar_la_ventana():
+    ahora = [1000.0]
+    limite = LimiteIntentosEnMemoria(max_fallos=2, ventana_segundos=60, reloj=lambda: ahora[0])
+
+    limite.registrar_fallo("a")
+    ahora[0] += 30
+    limite.registrar_fallo("a")
+    assert limite.segundos_bloqueado("a") == 30   # caduca el primer fallo en 30 s
+
+    ahora[0] += 30
+    assert limite.segundos_bloqueado("a") == 0
 
 
 def test_iniciar_sesion_exitoso(sesion):

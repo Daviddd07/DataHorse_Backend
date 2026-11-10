@@ -12,6 +12,7 @@ from app.domain.exceptions import (
     ConfiguracionError,
     ConflictoError,
     CorreoYaRegistradoError,
+    DemasiadosIntentosError,
     ErrorInternoError,
     InvalidCredentialsError,
     NoAutenticadoError,
@@ -36,6 +37,7 @@ from app.domain.ports.in_.registrar_usuario_port import (
     RegistrarUsuarioPort,
 )
 from app.domain.ports.out.auditoria_port import AuditoriaPort
+from app.domain.ports.out.limite_intentos_port import LimiteIntentosPort
 from app.domain.ports.out.password_hasher_port import PasswordHasherPort
 from app.domain.ports.out.usuario_google_repository_port import UsuarioGoogleRepositoryPort
 from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
@@ -133,10 +135,12 @@ class IniciarSesionUseCase(IniciarSesionPort):
         login: LoginPort,
         usuario_repo: UsuarioRepositoryPort,
         auditoria: AuditoriaPort,
+        limite: LimiteIntentosPort,
     ):
         self._login = login
         self._usuario_repo = usuario_repo
         self._auditoria = auditoria
+        self._limite = limite
 
     def _auditar(self, resultado: str, detalle: str, usuario_id: int | None = None) -> None:
         self._auditoria.registrar(
@@ -148,11 +152,27 @@ class IniciarSesionUseCase(IniciarSesionPort):
         )
 
     def ejecutar(self, correo: str, password: str) -> int:
+        # El límite va por correo: en Docker todas las peticiones llegan con la misma IP.
+        clave = correo.strip().lower()
+
+        # Se revisa antes de comprobar la contraseña: bloqueado, ni siquiera se intenta.
+        espera = self._limite.segundos_bloqueado(clave)
+        if espera:
+            minutos = -(-espera // 60)  # redondeo hacia arriba
+            self._auditar("BLOQUEADO", "Demasiados intentos fallidos")
+            raise DemasiadosIntentosError(
+                f"Demasiados intentos fallidos. Intenta de nuevo en {minutos} "
+                f"minuto{'s' if minutos != 1 else ''}."
+            )
+
         try:
             id_usuario = int(self._login.execute(correo, password))
         except InvalidCredentialsError:
+            self._limite.registrar_fallo(clave)
             self._auditar("FALLIDO", "Credenciales incorrectas")
             raise
+
+        self._limite.limpiar(clave)
 
         usuario = self._usuario_repo.find_by_id(id_usuario)
 
