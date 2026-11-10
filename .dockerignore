@@ -31,6 +31,8 @@ htmlcov/
 
 # Archivos subidos localmente (para no duplicar peso, usaremos el volumen)
 uploads/
+# Documentos de respaldo: privados, llegan por el volumen y nunca van en la imagen
+documentos/
 # Resultados y caché de análisis de SonarQube
 .scannerwork/
 .sonar/

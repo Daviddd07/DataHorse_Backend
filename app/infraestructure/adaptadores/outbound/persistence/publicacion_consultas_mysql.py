@@ -36,7 +36,12 @@ class PublicacionConsultasMySQL(PublicacionConsultasPort):
                             FROM favorito f
                             WHERE f.usuario_id_usuario = :id_usuario
                               AND f.caballo_id_caballo = c.id_caballo
-                        ) AS es_favorita
+                        ) AS es_favorita,
+                        EXISTS (
+                            SELECT 1
+                            FROM documento_caballo d
+                            WHERE d.caballo_id_caballo = c.id_caballo
+                        ) AS tiene_documentos
                     FROM publicacion p
                     INNER JOIN caballo c
                         ON p.caballo_id_caballo = c.id_caballo
@@ -80,6 +85,7 @@ class PublicacionConsultasMySQL(PublicacionConsultasPort):
                     "es_mia": fila.usuario_id_usuario == id_usuario_actual,
                     "es_favorita": bool(fila.es_favorita),
                     "foto_principal": f"/{fila.foto_ruta}" if fila.foto_ruta else None,
+                    "tiene_documentos": bool(fila.tiene_documentos),
                 }
                 for fila in resultado
             ]
@@ -105,7 +111,12 @@ class PublicacionConsultasMySQL(PublicacionConsultasPort):
                             FROM favorito f
                             WHERE f.usuario_id_usuario = :id_usuario
                               AND f.caballo_id_caballo = c.id_caballo
-                        ) AS es_favorita
+                        ) AS es_favorita,
+                        EXISTS (
+                            SELECT 1
+                            FROM documento_caballo d
+                            WHERE d.caballo_id_caballo = c.id_caballo
+                        ) AS tiene_documentos
                     FROM publicacion p
                     INNER JOIN caballo c
                         ON p.caballo_id_caballo = c.id_caballo
@@ -148,5 +159,6 @@ class PublicacionConsultasMySQL(PublicacionConsultasPort):
             "precio": _float_o_none(publicacion.precio_referencia),
             "es_mia": publicacion.usuario_id_usuario == id_usuario_actual,
             "es_favorita": bool(publicacion.es_favorita),
+            "tiene_documentos": bool(publicacion.tiene_documentos),
             "fotos": fotos,
         }

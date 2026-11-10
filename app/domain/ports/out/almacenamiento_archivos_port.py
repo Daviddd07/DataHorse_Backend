@@ -8,3 +8,7 @@ class AlmacenamientoArchivosPort(ABC):
 
     @abstractmethod
     def eliminar(self, ruta_relativa: str) -> None: ...
+
+    @abstractmethod
+    def leer(self, ruta_relativa: str) -> bytes:
+        """Contenido del archivo. Lanza FileNotFoundError si no existe."""

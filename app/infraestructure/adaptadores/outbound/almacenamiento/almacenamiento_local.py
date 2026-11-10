@@ -23,3 +23,7 @@ class AlmacenamientoLocal(AlmacenamientoArchivosPort):
 
         if ruta_fisica.exists():
             ruta_fisica.unlink()
+
+    def leer(self, ruta_relativa: str) -> bytes:
+        # Igual que eliminar: nunca se sale del directorio configurado.
+        return (self._directorio / Path(ruta_relativa).name).read_bytes()

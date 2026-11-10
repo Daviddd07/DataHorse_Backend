@@ -227,6 +227,7 @@ def fila_publicacion(**cambios):
         disponibilidad="Disponible", id_raza=1, raza="Criollo",
         raza_descripcion="r", propietario="Ana", propietario_ubicacion="Bogotá",
         propietario_telefono="300", foto_ruta="uploads/a.jpg", es_favorita=1,
+        tiene_documentos=1,
     )
     datos.update(cambios)
     return fila(**datos)
@@ -236,13 +237,16 @@ def test_listar_publicaciones_activas(motor_falso):
     motor_falso(publicaciones, resultado(filas=[
         fila_publicacion(),
         fila_publicacion(usuario_id_usuario=99, ubicacion_lat=None, ubicacion_lng=None,
-                         precio_referencia=None, foto_ruta=None, es_favorita=0),
+                         precio_referencia=None, foto_ruta=None, es_favorita=0,
+                         tiene_documentos=0),
     ]))
 
     lista = publicaciones.PublicacionConsultasMySQL().listar_activas(10)
 
     assert lista[0]["es_mia"] is True
     assert lista[0]["es_favorita"] is True
+    assert lista[0]["tiene_documentos"] is True
+    assert lista[1]["tiene_documentos"] is False
     assert lista[0]["foto_principal"] == "/uploads/a.jpg"
     assert lista[1]["es_mia"] is False
     assert lista[1]["ubicacion_lat"] is None
@@ -256,6 +260,7 @@ def test_detalle_publicacion(motor_falso):
 
     assert detalle["propietario_telefono"] == "300"
     assert detalle["fotos"][0]["ruta"] == "/uploads/a.jpg"
+    assert detalle["tiene_documentos"] is True
 
 
 def test_detalle_publicacion_inexistente(motor_falso):

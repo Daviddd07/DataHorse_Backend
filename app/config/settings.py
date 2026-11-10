@@ -63,6 +63,12 @@ FOTO_PERFIL_DIR = UPLOAD_DIR / "perfiles"
 FOTO_PERFIL_URL_PREFIX = "/uploads/perfiles"
 FOTO_PERFIL_LADO = 512                    # px: las fotos de perfil se guardan cuadradas
 
+# Documentos de respaldo (pedigrí, premios...): PRIVADOS. Van fuera de UPLOAD_DIR,
+# que se sirve en público por /uploads; solo se entregan por la API con sesión.
+# Límites y formatos: app/domain/services/validador_documento.py
+DOCUMENTO_DIR = BASE_DIR / "documentos"
+DOCUMENTO_PREFIJO = "documentos"
+
 # Límites de subida
 FOTO_MAX_SIZE = 5 * 1024 * 1024            # 5 MB por foto
 FOTO_ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}

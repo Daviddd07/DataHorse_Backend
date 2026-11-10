@@ -69,3 +69,30 @@ async def test_middleware_registra_error_y_lo_propaga():
     assert datos["excepcion"] == (
         "Error durante el procesamiento de la solicitud HTTP"
     )
+
+
+@pytest.mark.anyio
+async def test_middleware_guarda_el_log_sin_bloquear_el_servidor():
+    """Mientras MySQL guarda el log (lento), el bucle de eventos sigue atendiendo."""
+    import asyncio
+    import time
+
+    request = crear_request()
+    call_next = AsyncMock(return_value=Response(status_code=200))
+    latidos = []
+
+    async def latir():
+        for _ in range(5):
+            latidos.append(time.perf_counter())
+            await asyncio.sleep(0.02)
+
+    def guardar_lento(**_):
+        time.sleep(0.3)  # simula una escritura lenta en la base
+
+    with patch.object(main, "guardar_log_tecnico", side_effect=guardar_lento):
+        inicio = time.perf_counter()
+        await asyncio.gather(main.registrar_solicitud_http(request, call_next), latir())
+
+    # Si el log bloqueara el bucle, los latidos ocurrirían recién después de 0.3 s
+    assert len(latidos) == 5
+    assert latidos[-1] - inicio < 0.25

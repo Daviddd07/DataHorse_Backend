@@ -66,6 +66,21 @@ from app.application.use_cases.favorito_use_cases import (
     QuitarFavoritoUseCase,
 )
 from app.application.use_cases.foto_use_cases import EliminarFotoUseCase, SubirFotosUseCase
+from app.application.use_cases.documento_use_cases import (
+    EliminarDocumentoUseCase,
+    ListarDocumentosUseCase,
+    ObtenerArchivoDocumentoUseCase,
+    SubirDocumentosUseCase,
+)
+from app.domain.ports.in_.documento_ports import (
+    EliminarDocumentoPort,
+    ListarDocumentosPort,
+    ObtenerArchivoDocumentoPort,
+    SubirDocumentosPort,
+)
+from app.infraestructure.adaptadores.outbound.persistence.documento_repository_mysql import (
+    DocumentoRepositoryMySQL,
+)
 from app.application.use_cases.listar_razas_use_case import ListarRazasUseCase
 from app.application.use_cases.login_use_case import LoginUseCase
 from app.application.use_cases.publicacion_use_cases import (
@@ -82,6 +97,8 @@ from app.config.settings import (
     FOTO_PERFIL_DIR,
     FOTO_PERFIL_LADO,
     FOTO_PERFIL_URL_PREFIX,
+    DOCUMENTO_DIR,
+    DOCUMENTO_PREFIJO,
     GROQ_MODELOS,
     GROQ_TIMEOUT_SEGUNDOS,
     LIMITE_EVALUACIONES_DIARIAS,
@@ -252,6 +269,8 @@ _tokens = JwtTokenService()
 _limite_login = LimiteIntentosEnMemoria(LOGIN_MAX_FALLOS, LOGIN_VENTANA_SEGUNDOS)
 _almacenamiento = AlmacenamientoLocal(FOTO_CABALLO_DIR, FOTO_CABALLO_URL_PREFIX)
 _almacenamiento_perfiles = AlmacenamientoLocal(FOTO_PERFIL_DIR, FOTO_PERFIL_URL_PREFIX)
+_almacenamiento_documentos = AlmacenamientoLocal(DOCUMENTO_DIR, DOCUMENTO_PREFIJO)
+_documento_repo = DocumentoRepositoryMySQL()
 _procesador_imagen = PillowProcesadorImagen(FOTO_PERFIL_LADO)
 _verificador_google = VerificadorGoogle(os.getenv("GOOGLE_CLIENT_ID"))
 
@@ -540,3 +559,23 @@ def get_eliminar_foto_use_case(
     foto_repo: FotoRepository = Depends(get_foto_repository),
 ) -> EliminarFotoPort:
     return EliminarFotoUseCase(_caballo_repo, foto_repo, _almacenamiento, _auditoria)
+
+
+# ======================================================
+# DOCUMENTOS DE RESPALDO (caballos machos)
+# ======================================================
+
+def get_subir_documentos_use_case() -> SubirDocumentosPort:
+    return SubirDocumentosUseCase(_caballo_repo, _documento_repo, _almacenamiento_documentos, _auditoria)
+
+
+def get_listar_documentos_use_case() -> ListarDocumentosPort:
+    return ListarDocumentosUseCase(_documento_repo)
+
+
+def get_obtener_archivo_documento_use_case() -> ObtenerArchivoDocumentoPort:
+    return ObtenerArchivoDocumentoUseCase(_documento_repo, _almacenamiento_documentos)
+
+
+def get_eliminar_documento_use_case() -> EliminarDocumentoPort:
+    return EliminarDocumentoUseCase(_caballo_repo, _documento_repo, _almacenamiento_documentos, _auditoria)

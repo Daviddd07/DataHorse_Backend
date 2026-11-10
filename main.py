@@ -28,6 +28,8 @@ from fastapi.staticfiles import (
 
 from sqlalchemy import text
 
+from starlette.concurrency import run_in_threadpool
+
 from app.domain.exceptions import DominioError
 
 from app.application.use_cases.admin_inicial_use_case import DatosAdminInicial
@@ -43,6 +45,7 @@ from app.infraestructure.adaptadores.inbound.rest import (
     compatibilidad_controller,
     conversacion_controller,
     cuenta_controller,
+    documento_controller,
     favorito_controller,
     foto_controller,
     log_controller,
@@ -174,7 +177,10 @@ async def registrar_solicitud_http(
 
         logger.info("%s", mensaje)
 
-        guardar_log_tecnico(
+        # La escritura en MySQL es síncrona: en un hilo aparte para no congelar
+        # el servidor (este middleware es async y corre en el bucle de eventos).
+        await run_in_threadpool(
+            guardar_log_tecnico,
             nivel="INFO",
             modulo="http",
             mensaje=mensaje,
@@ -203,7 +209,8 @@ async def registrar_solicitud_http(
 
         logger.exception("%s", mensaje)
 
-        guardar_log_tecnico(
+        await run_in_threadpool(
+            guardar_log_tecnico,
             nivel="ERROR",
             modulo="http",
             mensaje=mensaje,
@@ -441,6 +448,7 @@ for router_caballos in (
     caballo_controller.router,
     foto_controller.router,
     favorito_controller.router,
+    documento_controller.router,
 ):
     app.include_router(
         router_caballos,

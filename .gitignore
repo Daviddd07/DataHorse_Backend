@@ -16,6 +16,9 @@ uploads/**
 !uploads/*/
 !uploads/**/.gitkeep
 
+# Documentos de respaldo de los caballos (pedigrí, premios...): privados, nunca a git
+documentos/
+
 # Editor
 .vscode/
 .idea/
