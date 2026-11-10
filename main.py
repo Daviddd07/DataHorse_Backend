@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import (
@@ -28,6 +29,10 @@ from fastapi.staticfiles import (
 from sqlalchemy import text
 
 from app.domain.exceptions import DominioError
+
+from app.application.use_cases.admin_inicial_use_case import DatosAdminInicial
+
+from app.config.dependencies import get_crear_admin_inicial_use_case
 
 from app.infraestructure.adaptadores.inbound.rest import (
     admin_controller,
@@ -82,9 +87,54 @@ logger = logging.getLogger("datahorse")
 # APLICACIÓN
 # ======================================================
 
+# ======================================================
+# PRIMER ADMINISTRADOR (desde el .env)
+# ======================================================
+
+def crear_admin_inicial() -> None:
+    """Crea el admin de ADMIN_CORREO / ADMIN_CONTRASENA si aún no existe.
+
+    Sin esas variables no hace nada. Un fallo aquí (datos inválidos, base
+    caída) se registra en el log pero no impide que la API arranque.
+    """
+    correo = os.getenv("ADMIN_CORREO", "").strip()
+    contrasena = os.getenv("ADMIN_CONTRASENA", "")
+
+    if not correo or not contrasena:
+        logger.info("Admin inicial omitido: ADMIN_CORREO / ADMIN_CONTRASENA no están definidos")
+        return
+
+    try:
+        creado = get_crear_admin_inicial_use_case().ejecutar(
+            DatosAdminInicial(
+                correo=correo,
+                contrasena=contrasena,
+                nombre=os.getenv("ADMIN_NOMBRE", "Administrador"),
+            )
+        )
+    except DominioError as e:
+        logger.error("Admin inicial no creado: %s", e.mensaje)
+        return
+    except Exception:
+        logger.exception("Admin inicial no creado: error inesperado")
+        return
+
+    if creado:
+        logger.info("Admin inicial creado | id_usuario=%s | correo=%s", creado.id_usuario, creado.correo)
+    else:
+        logger.info("Admin inicial ya existe | correo=%s", correo.lower())
+
+
+@asynccontextmanager
+async def ciclo_de_vida(_app: FastAPI):
+    crear_admin_inicial()
+    yield
+
+
 app = FastAPI(
     title="DataHorse API",
     version="0.1.0",
+    lifespan=ciclo_de_vida,
 )
 
 

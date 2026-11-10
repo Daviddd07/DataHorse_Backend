@@ -75,6 +75,7 @@ from app.application.use_cases.publicacion_use_cases import (
 from app.application.use_cases.registrar_caballo_use_case import RegistrarCaballoUseCase
 from app.application.use_cases.registrar_logs_use_case import RegistrarLogsUseCase
 from app.application.use_cases.registrar_use_case import RegistrarUseCase
+from app.application.use_cases.admin_inicial_use_case import CrearAdminInicialUseCase
 from app.config.settings import (
     FOTO_CABALLO_DIR,
     FOTO_CABALLO_URL_PREFIX,
@@ -279,6 +280,10 @@ def get_login_use_case() -> LoginPort:
 
 def get_registrar_use_case() -> RegistrarUsuarioPort:
     return RegistrarUseCase(_usuario_repo, _hasher, _geocoding)
+
+
+def get_crear_admin_inicial_use_case() -> CrearAdminInicialUseCase:
+    return CrearAdminInicialUseCase(_usuario_repo, _hasher)
 
 
 def get_registrar_cuenta_use_case() -> RegistrarCuentaPort:

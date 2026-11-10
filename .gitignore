@@ -1,27 +1,36 @@
 # Python
-backend/venv/
+venv/
+.venv/
 __pycache__/
 *.pyc
 
-# Angular / Node
-frontend/node_modules/
-frontend/.angular/
-
-# Variables de entorno
+# Variables de entorno (contienen contraseñas)
 .env
+.env.*
+!.env.example
+
+# Fotos subidas por los usuarios: se generan al usar la app.
+# Se conserva la estructura de carpetas con .gitkeep.
+uploads/**
+!uploads/
+!uploads/*/
+!uploads/**/.gitkeep
+
+# Editor
+.vscode/
+.idea/
 
 # Sistema
 .DS_Store
 Thumbs.db
-.env
+
+# Copias de seguridad locales
 backups/
+*.bak
 
 # Archivos temporales de SonarQube
 .scannerwork/
 report-task.txt
-
-# Copias de seguridad locales
-*.bak
 
 # Reportes de cobertura (se regeneran con pytest --cov)
 .coverage
