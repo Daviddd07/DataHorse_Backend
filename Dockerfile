@@ -37,5 +37,10 @@ USER appuser
 # Puerto de FastAPI
 EXPOSE 8000
 
-# Arranque del backend
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Tope de conexiones simultáneas: por encima, uvicorn responde 503 al instante en vez de
+# encolar peticiones que el cliente terminará abandonando (prueba E9: sin tope, el servidor
+# tardó ~90 s en recuperarse tras la sobrecarga). Se ajusta con UVICORN_LIMIT_CONCURRENCY.
+ENV UVICORN_LIMIT_CONCURRENCY=1000
+
+# Arranque del backend (exec: uvicorn queda como proceso principal y recibe las señales de Docker)
+CMD ["sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port 8000 --limit-concurrency ${UVICORN_LIMIT_CONCURRENCY}"]

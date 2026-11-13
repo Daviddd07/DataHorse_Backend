@@ -23,6 +23,7 @@ from app.domain.ports.in_.cuenta_ports import (
 )
 from app.domain.ports.in_.registrar_usuario_port import RegistrarUsuarioComando
 from app.domain.ports.out.token_port import TokenPort
+from app.infraestructure.adaptadores.inbound.rest.limitador_login import limitar_login
 from app.infraestructure.adaptadores.inbound.rest.schemas import (
     CorreoRequest,
     GoogleAuthRequest,
@@ -97,7 +98,7 @@ def resend_code(
     return {"mensaje": "Código reenviado correctamente"}
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(limitar_login)])
 def login(
     body: LoginRequest,
     response: Response,

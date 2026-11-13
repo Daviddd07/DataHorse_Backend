@@ -70,6 +70,55 @@ def test_geocoding_error_de_red():
         assert nominatim_geocoding.NominatimGeocoding().geocodificar("Lugar") is None
 
 
+def test_geocoding_timeout_por_defecto_corto():
+    assert nominatim_geocoding.NominatimGeocoding().timeout == 3
+
+
+def test_geocoding_cachea_por_texto_normalizado():
+    geocoder = nominatim_geocoding.NominatimGeocoding()
+    with patch.object(nominatim_geocoding.requests, "get", return_value=respuesta_http(datos=[RESULTADO_OSM])) as get:
+        primero = geocoder.geocodificar("Fusagasugá")
+        segundo = geocoder.geocodificar("  fusagasugá ")
+
+    assert get.call_count == 1
+    assert segundo == primero
+
+
+def test_geocoding_cachea_lugar_no_encontrado():
+    geocoder = nominatim_geocoding.NominatimGeocoding()
+    with patch.object(nominatim_geocoding.requests, "get", return_value=respuesta_http(datos=[])) as get:
+        assert geocoder.geocodificar("Lugar inexistente") is None
+        assert geocoder.geocodificar("Lugar inexistente") is None
+
+    assert get.call_count == 1
+
+
+@pytest.mark.parametrize("fallo", [{"side_effect": requests.Timeout()}, {"return_value": respuesta_http(status=429)}])
+def test_geocoding_no_cachea_errores_temporales(fallo):
+    geocoder = nominatim_geocoding.NominatimGeocoding()
+    with patch.object(nominatim_geocoding.requests, "get", **fallo):
+        assert geocoder.geocodificar("Tunja") is None
+
+    with patch.object(nominatim_geocoding.requests, "get", return_value=respuesta_http(datos=[RESULTADO_OSM])) as get:
+        assert geocoder.geocodificar("Tunja") is not None
+
+    get.assert_called_once()
+
+
+def test_geocoding_cache_descarta_la_menos_usada():
+    geocoder = nominatim_geocoding.NominatimGeocoding()
+    geocoder.MAX_ENTRADAS_CACHE = 2
+    with patch.object(nominatim_geocoding.requests, "get", return_value=respuesta_http(datos=[RESULTADO_OSM])) as get:
+        geocoder.geocodificar("A")
+        geocoder.geocodificar("B")
+        geocoder.geocodificar("A")  # A pasa a ser la más reciente
+        geocoder.geocodificar("C")  # se descarta B
+        geocoder.geocodificar("A")
+        geocoder.geocodificar("B")
+
+    assert get.call_count == 4  # A, B, C y B otra vez
+
+
 # ======================================================
 # MAILJET
 # ======================================================

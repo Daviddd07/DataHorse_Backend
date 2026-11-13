@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 
@@ -17,6 +18,12 @@ ESTADO_INICIAL = "activo"
 # dentro de la ventana, ese correo queda bloqueado hasta que caduque el fallo más antiguo.
 LOGIN_MAX_FALLOS = 5
 LOGIN_VENTANA_SEGUNDOS = 15 * 60
+
+# Login: máximo de intentos por IP dentro de la ventana (aciertos y fallos), para frenar
+# fuerza bruta contra muchas cuentas y la saturación del login. 0 lo desactiva
+# (lo usa el entorno de pruebas de carga, donde todos los usuarios virtuales comparten IP).
+LOGIN_LIMITE_POR_IP = int(os.getenv("LOGIN_LIMITE_POR_IP", "20"))
+LOGIN_LIMITE_VENTANA_SEGUNDOS = 60
 
 # Largo mínimo de los secretos del .env (se revisa al arrancar)
 LARGO_MINIMO_SECRETO = 32
