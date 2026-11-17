@@ -9,12 +9,8 @@ ENV PYTHONUNBUFFERED=1
 # Directorio de trabajo
 WORKDIR /app
 
-# Dependencias del sistema
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    default-libmysqlclient-dev \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+# Sin paquetes del sistema: todas las dependencias (PyMySQL, argon2, cryptography, pillow...)
+# traen ruedas precompiladas para x86_64 (Windows/Docker Desktop) y arm64 (Ubuntu en AWS Graviton).
 
 # Instalar dependencias de Python
 COPY requirements.txt .

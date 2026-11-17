@@ -138,10 +138,17 @@ async def ciclo_de_vida(_app: FastAPI):
     yield
 
 
+# En producción no se publica la documentación interactiva (/docs, /redoc, /openapi.json):
+# cualquiera en internet vería todas las rutas y esquemas de la API.
+ES_PRODUCCION = os.getenv("ENVIRONMENT") == "production"
+
 app = FastAPI(
     title="DataHorse API",
     version="0.1.0",
     lifespan=ciclo_de_vida,
+    docs_url=None if ES_PRODUCCION else "/docs",
+    redoc_url=None if ES_PRODUCCION else "/redoc",
+    openapi_url=None if ES_PRODUCCION else "/openapi.json",
 )
 
 
