@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends
 
 from app.config.dependencies import (
@@ -6,14 +8,14 @@ from app.config.dependencies import (
 )
 from app.domain.ports.in_.publicacion_ports import ListarPublicacionesPort, ObtenerPublicacionPort
 from app.infraestructure.adaptadores.inbound.rest.errores import error_interno
-from app.infraestructure.adaptadores.inbound.rest.seguridad import obtener_id_usuario_autenticado
+from app.infraestructure.adaptadores.inbound.rest.seguridad import obtener_id_usuario_opcional
 
 router = APIRouter(prefix="/publicaciones", tags=["publicaciones"])
 
 
 @router.get("")
 def listar_publicaciones(
-    id_usuario: int = Depends(obtener_id_usuario_autenticado),
+    id_usuario: Optional[int] = Depends(obtener_id_usuario_opcional),  # público: el marketplace se ve sin sesión
     use_case: ListarPublicacionesPort = Depends(get_listar_publicaciones_use_case),
 ):
     with error_interno("Error al consultar publicaciones"):
@@ -23,7 +25,7 @@ def listar_publicaciones(
 @router.get("/{id_publicacion}")
 def obtener_publicacion_detalle(
     id_publicacion: int,
-    id_usuario: int = Depends(obtener_id_usuario_autenticado),
+    id_usuario: Optional[int] = Depends(obtener_id_usuario_opcional),  # público: el marketplace se ve sin sesión
     use_case: ObtenerPublicacionPort = Depends(get_obtener_publicacion_use_case),
 ):
     with error_interno("Error al consultar la publicación"):

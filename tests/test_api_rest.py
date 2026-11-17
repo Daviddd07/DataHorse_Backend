@@ -485,6 +485,51 @@ def test_publicaciones(api):
     detalle.ejecutar.assert_called_once_with(1, 7)
 
 
+def test_marketplace_publico_sin_sesion(api):
+    """Un visitante sin cuenta ve la lista, el detalle y la calificación del vendedor."""
+    api.cookies.clear()
+    listar = api.usar(deps.get_listar_publicaciones_use_case)
+    listar.ejecutar.return_value = [{"id_publicacion": 1}]
+    detalle = api.usar(deps.get_obtener_publicacion_use_case)
+    detalle.ejecutar.return_value = {"id_publicacion": 1}
+    calificacion = api.usar(deps.get_obtener_calificacion_use_case)
+    calificacion.ejecutar.return_value.a_dict.return_value = {"promedio": 4.5, "cantidad": 2}
+
+    assert api.get("/publicaciones").status_code == 200
+    assert api.get("/publicaciones/1").status_code == 200
+    assert api.get("/api/v1/usuarios/3/calificacion").json() == {"promedio": 4.5, "cantidad": 2}
+    listar.ejecutar.assert_called_once_with(None)
+    detalle.ejecutar.assert_called_once_with(1, None)
+
+
+def test_sesion_invalida_en_marketplace_se_trata_como_visitante(api):
+    api.cookies.clear()
+    api.cookies.set("access_token", "vencido")
+    detalle = api.usar(deps.get_obtener_publicacion_use_case)
+    detalle.ejecutar.return_value = {"id_publicacion": 1}
+
+    assert api.get("/publicaciones/1").status_code == 200
+    detalle.ejecutar.assert_called_once_with(1, None)
+
+
+@pytest.mark.parametrize(
+    ("metodo", "ruta"),
+    [
+        ("get", "/api/v1/caballos/mios"),
+        ("post", "/api/v1/caballos/5/favorito"),
+        ("get", "/api/v1/conversaciones"),
+        ("post", "/api/v1/conversaciones"),
+        ("get", "/api/v1/caballos/5/documentos"),
+        ("get", "/auth/me"),
+    ],
+)
+def test_visitante_no_puede_chatear_publicar_ni_ver_documentos(api, metodo, ruta):
+    """El marketplace es público, pero chatear, favoritos, documentos y lo propio siguen exigiendo sesión."""
+    api.cookies.clear()
+
+    assert getattr(api, metodo)(ruta).status_code == 401
+
+
 # ======================================================
 # ADMINISTRACIÓN
 # ======================================================

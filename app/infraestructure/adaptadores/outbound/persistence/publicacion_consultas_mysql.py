@@ -15,7 +15,7 @@ def _float_o_none(valor) -> Optional[float]:
 
 class PublicacionConsultasMySQL(PublicacionConsultasPort):
 
-    def listar_activas(self, id_usuario_actual: int) -> List[dict]:
+    def listar_activas(self, id_usuario_actual: Optional[int]) -> List[dict]:
         with engine.connect() as connection:
             resultado = connection.execute(
                 text("""
@@ -90,7 +90,7 @@ class PublicacionConsultasMySQL(PublicacionConsultasPort):
                 for fila in resultado
             ]
 
-    def obtener_detalle(self, id_publicacion: int, id_usuario_actual: int) -> Optional[dict]:
+    def obtener_detalle(self, id_publicacion: int, id_usuario_actual: Optional[int]) -> Optional[dict]:
         with engine.connect() as connection:
             publicacion = connection.execute(
                 text("""

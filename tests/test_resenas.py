@@ -396,9 +396,13 @@ def test_rest_calificacion_de_un_usuario(api):
     caso.ejecutar.assert_called_once_with(10)
 
 
-def test_rest_calificacion_exige_sesion(api):
+def test_rest_calificacion_es_publica(api):
+    # El marketplace se ve sin sesión: las estrellas del vendedor también (solo promedio y cantidad)
     api.cookies.clear()
-    assert api.get("/api/v1/usuarios/10/calificacion").status_code == 401
+    caso = api.usar(deps.get_obtener_calificacion_use_case)
+    caso.ejecutar.return_value.a_dict.return_value = {"promedio": None, "cantidad": 0}
+
+    assert api.get("/api/v1/usuarios/10/calificacion").status_code == 200
 
 
 # ======================================================

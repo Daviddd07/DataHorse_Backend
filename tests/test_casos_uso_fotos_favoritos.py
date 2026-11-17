@@ -211,6 +211,22 @@ def test_obtener_publicacion():
     assert ObtenerPublicacionUseCase(consultas).ejecutar(1, 10) == {"id_publicacion": 1}
 
 
+def test_visitante_no_ve_el_telefono_del_vendedor():
+    consultas = Mock()
+    consultas.obtener_detalle.return_value = {"id_publicacion": 1, "propietario_telefono": "3001234567"}
+
+    assert ObtenerPublicacionUseCase(consultas).ejecutar(1, None)["propietario_telefono"] is None
+    assert ObtenerPublicacionUseCase(consultas).ejecutar(1, 10)["propietario_telefono"] == "3001234567"
+
+
+def test_listar_publicaciones_sin_sesion():
+    consultas = Mock()
+    consultas.listar_activas.return_value = []
+
+    assert ListarPublicacionesUseCase(consultas).ejecutar(None) == []
+    consultas.listar_activas.assert_called_once_with(None)
+
+
 def test_obtener_publicacion_no_encontrada():
     consultas = Mock()
     consultas.obtener_detalle.return_value = None
