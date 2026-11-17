@@ -165,8 +165,11 @@ def test_mailjet_rechaza_envio():
 def test_hmac_es_determinista_y_depende_del_secreto():
     hasher = HmacCodigoHasher("secreto")
 
-    assert hasher.hashear("123456") == hasher.hashear("123456")
-    assert hasher.hashear("123456") != HmacCodigoHasher("otro").hashear("123456")
+    primero = hasher.hashear("123456")
+    segundo = HmacCodigoHasher("secreto").hashear("123456")
+
+    assert primero == segundo
+    assert primero != HmacCodigoHasher("otro").hashear("123456")
 
 
 def test_hmac_sin_secreto():

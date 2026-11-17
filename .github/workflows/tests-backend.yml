@@ -43,12 +43,15 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
-          cache-dependency-path: requirements.txt
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
 
+      # Solo ruedas precompiladas (no se ejecuta setup.py de nadie) y cada archivo debe
+      # coincidir con su hash SHA-256 fijado en los requirements.
       - name: Instalar dependencias del proyecto
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements-dev.txt
+          python -m pip install --only-binary :all: --require-hashes -r requirements-dev.txt
 
       - name: Verificar dependencias
         run: python -m pip check

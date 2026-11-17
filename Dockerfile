@@ -12,9 +12,10 @@ WORKDIR /app
 # Sin paquetes del sistema: todas las dependencias (PyMySQL, argon2, cryptography, pillow...)
 # traen ruedas precompiladas para x86_64 (Windows/Docker Desktop) y arm64 (Ubuntu en AWS Graviton).
 
-# Instalar dependencias de Python
+# Instalar dependencias de Python: solo ruedas (sin ejecutar setup.py) y verificando
+# el hash SHA-256 de cada archivo contra el fijado en requirements.txt
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --only-binary :all: --require-hashes -r requirements.txt
 
 # Copiar el código de la aplicación
 # Copiar el archivo principal de FastAPI
