@@ -92,6 +92,9 @@ from app.application.use_cases.registrar_logs_use_case import RegistrarLogsUseCa
 from app.application.use_cases.registrar_use_case import RegistrarUseCase
 from app.application.use_cases.admin_inicial_use_case import CrearAdminInicialUseCase
 from app.config.settings import (
+    ALMACENAMIENTO,
+    AWS_REGION,
+    S3_BUCKET_ARCHIVOS,
     FOTO_CABALLO_DIR,
     FOTO_CABALLO_URL_PREFIX,
     FOTO_PERFIL_DIR,
@@ -172,6 +175,9 @@ from app.domain.ports.out.token_port import TokenPort
 from app.domain.ports.out.usuario_repository_port import UsuarioRepositoryPort
 from app.infraestructure.adaptadores.outbound.almacenamiento.almacenamiento_local import (
     AlmacenamientoLocal,
+)
+from app.infraestructure.adaptadores.outbound.almacenamiento.almacenamiento_s3 import (
+    AlmacenamientoS3,
 )
 from app.infraestructure.adaptadores.outbound.argon2_password_hasher import Argon2PasswordHasher
 from app.infraestructure.adaptadores.outbound.correo.mailjet_enviador import MailjetEnviadorCodigo
@@ -267,9 +273,25 @@ _geocoding = NominatimGeocoding()
 _tokens = JwtTokenService()
 # Con estado: debe ser uno solo para que los fallos se acumulen entre solicitudes
 _limite_login = LimiteIntentosEnMemoria(LOGIN_MAX_FALLOS, LOGIN_VENTANA_SEGUNDOS)
-_almacenamiento = AlmacenamientoLocal(FOTO_CABALLO_DIR, FOTO_CABALLO_URL_PREFIX)
-_almacenamiento_perfiles = AlmacenamientoLocal(FOTO_PERFIL_DIR, FOTO_PERFIL_URL_PREFIX)
-_almacenamiento_documentos = AlmacenamientoLocal(DOCUMENTO_DIR, DOCUMENTO_PREFIJO)
+_cliente_s3 = None
+
+
+def _crear_almacenamiento(directorio, prefijo):
+    """Disco en desarrollo; bucket S3 en producción (ALMACENAMIENTO=s3).
+    En AWS las credenciales vienen del rol de la máquina virtual: no hay claves en el .env."""
+    global _cliente_s3
+    if ALMACENAMIENTO != "s3":
+        return AlmacenamientoLocal(directorio, prefijo)
+    if _cliente_s3 is None:
+        import boto3  # solo hace falta en producción
+
+        _cliente_s3 = boto3.client("s3", region_name=AWS_REGION)
+    return AlmacenamientoS3(_cliente_s3, S3_BUCKET_ARCHIVOS, prefijo)
+
+
+_almacenamiento = _crear_almacenamiento(FOTO_CABALLO_DIR, FOTO_CABALLO_URL_PREFIX)
+_almacenamiento_perfiles = _crear_almacenamiento(FOTO_PERFIL_DIR, FOTO_PERFIL_URL_PREFIX)
+_almacenamiento_documentos = _crear_almacenamiento(DOCUMENTO_DIR, DOCUMENTO_PREFIJO)
 _documento_repo = DocumentoRepositoryMySQL()
 _procesador_imagen = PillowProcesadorImagen(FOTO_PERFIL_LADO)
 _verificador_google = VerificadorGoogle(os.getenv("GOOGLE_CLIENT_ID"))
@@ -579,3 +601,8 @@ def get_obtener_archivo_documento_use_case() -> ObtenerArchivoDocumentoPort:
 
 def get_eliminar_documento_use_case() -> EliminarDocumentoPort:
     return EliminarDocumentoUseCase(_caballo_repo, _documento_repo, _almacenamiento_documentos, _auditoria)
+
+
+def get_almacenamientos_publicos() -> dict:
+    """Carpetas de /uploads que se pueden ver sin sesión (fotos). Los documentos NO están aquí: son privados."""
+    return {"caballos": _almacenamiento, "perfiles": _almacenamiento_perfiles}

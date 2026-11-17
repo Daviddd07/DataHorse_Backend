@@ -76,6 +76,12 @@ FOTO_PERFIL_LADO = 512                    # px: las fotos de perfil se guardan c
 DOCUMENTO_DIR = BASE_DIR / "documentos"
 DOCUMENTO_PREFIJO = "documentos"
 
+# Dónde se guardan fotos y documentos: "local" (disco, desarrollo) o "s3" (bucket privado, producción).
+# Con "s3" las rutas guardadas en la base son las mismas: cada ruta es la clave del objeto en el bucket.
+ALMACENAMIENTO = os.getenv("ALMACENAMIENTO", "local").strip().lower()
+S3_BUCKET_ARCHIVOS = os.getenv("S3_BUCKET_ARCHIVOS", "").strip()
+AWS_REGION = os.getenv("AWS_REGION", "us-east-2")
+
 # Límites de subida
 FOTO_MAX_SIZE = 5 * 1024 * 1024            # 5 MB por foto
 FOTO_ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}

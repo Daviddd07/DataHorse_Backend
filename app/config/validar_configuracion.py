@@ -35,6 +35,13 @@ def problemas_de_configuracion(entorno=os.environ) -> List[str]:
                 f"{nombre} es demasiado corta ({len(valor)} caracteres; mínimo {LARGO_MINIMO_SECRETO})"
             )
 
+    # Archivos en S3: sin bucket no se podría guardar ni leer ninguna foto o documento.
+    almacenamiento = entorno.get("ALMACENAMIENTO", "local").strip().lower()
+    if almacenamiento not in ("local", "s3"):
+        problemas.append(f"ALMACENAMIENTO debe ser 'local' o 's3' (es '{almacenamiento}')")
+    elif almacenamiento == "s3" and not entorno.get("S3_BUCKET_ARCHIVOS", "").strip():
+        problemas.append("Falta S3_BUCKET_ARCHIVOS (obligatoria con ALMACENAMIENTO=s3)")
+
     return problemas
 
 

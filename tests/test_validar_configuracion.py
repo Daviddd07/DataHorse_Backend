@@ -38,3 +38,20 @@ def test_secreto_demasiado_corto():
     assert problemas_de_configuracion(entorno) == [
         "SECRET_KEY es demasiado corta (5 caracteres; mínimo 32)"
     ]
+
+
+def test_almacenamiento_s3_exige_bucket():
+    entorno = {**ENTORNO_VALIDO, "ALMACENAMIENTO": "s3"}
+
+    assert problemas_de_configuracion(entorno) == [
+        "Falta S3_BUCKET_ARCHIVOS (obligatoria con ALMACENAMIENTO=s3)"
+    ]
+    assert problemas_de_configuracion({**entorno, "S3_BUCKET_ARCHIVOS": "mi-bucket"}) == []
+
+
+def test_almacenamiento_desconocido():
+    entorno = {**ENTORNO_VALIDO, "ALMACENAMIENTO": "ftp"}
+
+    assert problemas_de_configuracion(entorno) == [
+        "ALMACENAMIENTO debe ser 'local' o 's3' (es 'ftp')"
+    ]

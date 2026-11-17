@@ -40,6 +40,7 @@ from app.config.validar_configuracion import validar_configuracion
 
 from app.infraestructure.adaptadores.inbound.rest import (
     admin_controller,
+    archivos_publicos_controller,
     auth_controller,
     caballo_controller,
     compatibilidad_controller,
@@ -72,6 +73,7 @@ from app.infraestructure.adaptadores.outbound.persistence.technical_log_service 
 )
 
 from app.config.settings import (
+    ALMACENAMIENTO,
     ORIGENES_PERMITIDOS,
     UPLOAD_DIR,
 )
@@ -389,18 +391,26 @@ async def general_exception_handler(
 # ARCHIVOS / FOTOS
 # ======================================================
 
-UPLOAD_DIR.mkdir(
-    parents=True,
-    exist_ok=True,
-)
+# Misma URL (/uploads/...) en los dos modos: el frontend no se entera de dónde están las fotos.
+if ALMACENAMIENTO == "s3":
+    # Producción: bucket privado; el backend entrega las fotos públicas.
+    app.include_router(
+        archivos_publicos_controller.router
+    )
+else:
+    # Desarrollo: fotos en el disco.
+    UPLOAD_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
-app.mount(
-    "/uploads",
-    StaticFiles(
-        directory=str(UPLOAD_DIR)
-    ),
-    name="uploads",
-)
+    app.mount(
+        "/uploads",
+        StaticFiles(
+            directory=str(UPLOAD_DIR)
+        ),
+        name="uploads",
+    )
 
 
 # ======================================================
