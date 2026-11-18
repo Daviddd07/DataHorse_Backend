@@ -40,10 +40,10 @@ def hashes_de_ruedas(nombre: str, version: str) -> list[str]:
     return hashes
 
 
-def procesar(ruta: Path) -> None:
-    lineas_entrada = ruta.read_text(encoding="utf-8").splitlines()
+def con_hashes(contenido: str, etiqueta: str) -> str:
+    """Devuelve el contenido de un requirements con los hashes regenerados."""
     salida: list[str] = []
-    for linea in lineas_entrada:
+    for linea in contenido.splitlines():
         recortada = linea.strip()
         if recortada.startswith("--hash="):
             continue  # hash viejo: se regenera
@@ -57,10 +57,12 @@ def procesar(ruta: Path) -> None:
         for indice, valor in enumerate(hashes):
             final = "" if indice == len(hashes) - 1 else " \\"
             salida.append(f"    --hash=sha256:{valor}{final}")
-        print(f"{ruta.name}: {nombre}=={version} ({len(hashes)} hashes)")
-    ruta.write_text("\n".join(salida) + "\n", encoding="utf-8")
+        print(f"{etiqueta}: {nombre}=={version} ({len(hashes)} hashes)")
+    return "\n".join(salida) + "\n"
 
 
 if __name__ == "__main__":
     for nombre_archivo in ARCHIVOS:
-        procesar(CARPETA_BACKEND / nombre_archivo)
+        contenido = (CARPETA_BACKEND / nombre_archivo).read_text(encoding="utf-8")
+        nuevo = con_hashes(contenido, nombre_archivo)
+        (CARPETA_BACKEND / nombre_archivo).write_text(nuevo, encoding="utf-8")
