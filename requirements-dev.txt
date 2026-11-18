@@ -1,7 +1,7 @@
 # Dependencias para desarrollo y pruebas (además de las de producción).
 # Uso: pip install --only-binary :all: --require-hashes -r requirements-dev.txt
 # Incluye también las dependencias transitivas: --require-hashes exige fijarlas todas.
-# Tras cambiar una versión: python herramientas/fijar_hashes.py requirements.txt requirements-dev.txt
+# Tras cambiar una versión: python herramientas/fijar_hashes.py
 -r requirements.txt
 
 coverage==7.17.3 \

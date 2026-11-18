@@ -4,20 +4,24 @@ pip se ejecuta con ``--require-hashes --only-binary :all:`` (CI y Dockerfile), a
 paquete fijado con ``nombre==versión`` debe llevar el hash de sus ruedas (.whl). Con eso pip
 rechaza cualquier archivo que no sea exactamente el publicado para esa versión.
 
-Uso (desde la carpeta backend), cada vez que cambie una versión en los requirements:
+Uso, cada vez que cambie una versión en los requirements (desde cualquier carpeta):
 
-    python herramientas/fijar_hashes.py requirements.txt requirements-dev.txt
+    python herramientas/fijar_hashes.py
+
+Procesa siempre los mismos dos archivos de la carpeta backend (no recibe rutas).
 
 El script es idempotente: borra los hashes anteriores y vuelve a escribirlos.
 """
 
 import json
 import re
-import sys
 import urllib.request
 from pathlib import Path
 
 PYPI = "https://pypi.org/pypi/{nombre}/{version}/json"
+# Archivos fijos: el script no acepta rutas de fuera
+CARPETA_BACKEND = Path(__file__).resolve().parent.parent
+ARCHIVOS = ("requirements.txt", "requirements-dev.txt")
 FIJADO = re.compile(r"^([A-Za-z0-9][A-Za-z0-9._-]*)==([^\s;\\]+)")
 
 
@@ -58,7 +62,5 @@ def procesar(ruta: Path) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        raise SystemExit(__doc__)
-    for argumento in sys.argv[1:]:
-        procesar(Path(argumento))
+    for nombre_archivo in ARCHIVOS:
+        procesar(CARPETA_BACKEND / nombre_archivo)

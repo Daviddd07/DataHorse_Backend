@@ -2,7 +2,7 @@
 # Versiones exactas del contenedor que funciona: así cada build instala lo mismo.
 # Cada versión lleva los hashes SHA-256 de PyPI: se instala con
 #   pip install --only-binary :all: --require-hashes -r requirements.txt
-# Tras cambiar una versión: python herramientas/fijar_hashes.py requirements.txt requirements-dev.txt
+# Tras cambiar una versión: python herramientas/fijar_hashes.py
 # Para los tests: requirements-dev.txt
 
 agent-detector==2.0.0 \
