@@ -142,13 +142,17 @@ def test_actualizar_reemplaza_la_descendencia(motor_falso):
     assert params(conexion, 1)["modalidad"] == "Trocha"
 
 
-def test_eliminar_borra_publicacion_y_marca_caballo(motor_falso):
+def test_eliminar_es_logico_y_no_borra_la_publicacion(motor_falso):
     conexion = motor_falso(caballos, resultado(), resultado())
 
     caballos.CaballoRepositoryMySQL().eliminar(5)
 
     sentencias = [str(c.args[0]) for c in conexion.execute.call_args_list]
-    assert "DELETE FROM publicacion" in sentencias[0]
+    # Nada se borra físicamente: las conversaciones siguen apuntando a la publicación
+    assert not any("DELETE" in s for s in sentencias)
+    assert "UPDATE publicacion" in sentencias[0]
+    assert "'Eliminada'" in sentencias[0]
+    assert params(conexion, 0) == {"id_caballo": 5}
     assert "'Eliminado'" in sentencias[1]
 
 

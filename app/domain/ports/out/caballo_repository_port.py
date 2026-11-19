@@ -59,4 +59,4 @@ class CaballoRepositoryPort(ABC):
 
     @abstractmethod
     def eliminar(self, id_caballo: int) -> None:
-        """Borra la publicación y marca el caballo como 'Eliminado'."""
+        """Borrado lógico: la publicación pasa a 'Eliminada' y el caballo a 'Eliminado'."""

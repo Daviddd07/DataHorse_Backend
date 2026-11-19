@@ -271,9 +271,16 @@ class CaballoRepositoryMySQL(CaballoRepositoryPort):
                 )
 
     def eliminar(self, id_caballo: int) -> None:
+        # Borrado lógico: nada se elimina físicamente. La publicación pasa a 'Eliminada'
+        # (el marketplace solo muestra las 'Activa') y conserva sus conversaciones y su historial,
+        # que la referencian por clave foránea (un DELETE fallaba si alguien ya había chateado).
         with engine.begin() as connection:
             connection.execute(
-                text("DELETE FROM publicacion WHERE caballo_id_caballo = :id_caballo"),
+                text("""
+                    UPDATE publicacion
+                    SET estado = 'Eliminada'
+                    WHERE caballo_id_caballo = :id_caballo
+                """),
                 {"id_caballo": id_caballo},
             )
             connection.execute(
